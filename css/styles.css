@@ -157,3 +157,12 @@ label{font-weight:500;letter-spacing:.01em}
 .opt .ic{opacity:0;color:var(--lime)}
 .opt.sel{border-color:var(--lime);background:rgba(212,255,36,.08);color:var(--lime)}
 .opt.sel .ic{opacity:1;animation:pop .22s ease}
+
+#v-inicio.active{display:flex;flex-direction:column;height:100%;overflow:hidden}
+#v-inicio .hero{flex:none;padding:16px 18px}
+.hero p{margin-top:8px}
+.hero h2{margin:0 0 12px}
+.sheet.hist{flex:1;min-height:0;display:flex;flex-direction:column;margin-bottom:10px}
+#lista{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px 6px}
+.qa .btn{white-space:nowrap;padding:12px 8px}
+.bd{white-space:nowrap}
