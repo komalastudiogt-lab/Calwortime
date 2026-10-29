@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  // Aviso visible si ocurre un error de JavaScript (para diagnosticar en el teléfono)
+  window.addEventListener('error', function (e) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#ff5d5d;color:#1a0505;padding:10px;border-radius:10px;font-size:12px;font-weight:700';
+    d.textContent = 'Error: ' + e.message + ' (línea ' + (e.lineno || '?') + ')';
+    document.body.appendChild(d);
+  });
+
   var $ = function (id) { return document.getElementById(id); };
   var K = { p: 'calwortime_perfil', s: 'calwortime_turnos' };
 
@@ -435,16 +443,4 @@
   function pick(title, opts, cur, cb) {
     $('pk-t').textContent = title;
     $('pk-l').innerHTML = opts.map(function (o) {
-      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" data-v="' + o[0] + '"><span>' + o[1] + '</span>' + ic('tick') + '</button>';
-    }).join('');
-    pickCb = cb;
-    openM('m-pick');
-  }
-  $('pk-l').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-v]');
-    if (!b) return;
-    var f = pickCb; pickCb = null; closeM();
-    if (f) f(b.dataset.v);
-  });
-  $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
-  $('filtro-b').addEventListen
+      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" d
