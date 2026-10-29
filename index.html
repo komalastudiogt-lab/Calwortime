@@ -30,6 +30,8 @@
 <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></symbol>
 <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
 <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></symbol>
+<symbol id="i-chev" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
+<symbol id="i-tick" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
 </defs></svg>
 
 <header>
@@ -66,14 +68,8 @@
         <label>Hora de entrada<div class="fi"><input type="text" id="j-ini" placeholder="00:00" readonly required><svg class="ic"><use href="#i-clock"/></svg></div></label>
         <label>Hora de salida<div class="fi"><input type="text" id="j-fin" placeholder="00:00" readonly required><svg class="ic"><use href="#i-clock"/></svg></div></label>
         <label>Pausa no remunerada (minutos)<input type="number" id="j-pausa" value="0" min="0" inputmode="numeric"></label>
-        <label>Recargo festivo
-          <select id="j-fest">
-            <option value="none">Día normal (sin recargo)</option>
-            <option value="all">Todo el turno es festivo</option>
-            <option value="start">Solo entrada (antes de medianoche)</option>
-            <option value="end">Solo salida (después de medianoche)</option>
-          </select>
-        </label>
+        <label>Recargo festivo<div class="fi"><input type="text" id="j-fest-t" value="Día normal (sin recargo)" readonly><svg class="ic"><use href="#i-chev"/></svg></div></label>
+        <input type="hidden" id="j-fest" value="none">
         <label>Cliente o buque (opcional)<input type="text" id="j-notas" placeholder="Ej. Empresa / Buque / Turno extra"></label>
         <button type="submit" class="btn full" id="btn-guardar">Guardar jornada</button>
         <button type="button" class="btn ghost full" id="btn-cancelar" hidden>Cancelar edición</button>
@@ -85,11 +81,7 @@
     <div class="sheet">
       <div class="bar">
         <h3>Rendimiento</h3>
-        <select id="filtro">
-          <option value="15">15 días</option>
-          <option value="30">30 días</option>
-          <option value="all">Todo</option>
-        </select>
+        <button type="button" class="chip" id="filtro-b"><span id="filtro-t">15 días</span><svg class="ic"><use href="#i-chev"/></svg></button><input type="hidden" id="filtro" value="15">
       </div>
       <div class="chart"><canvas id="grafica"></canvas></div>
     </div>
@@ -161,6 +153,14 @@
     <button type="button" class="btn ghost full" id="btn-import"><svg class="ic"><use href="#i-up"/></svg>Importar respaldo</button>
     <input type="file" id="file-import" accept=".json,application/json" hidden>
     <button type="button" class="btn ghost full" data-close>Cerrar</button>
+  </div>
+</div>
+
+<div id="m-pick" class="modal">
+  <div class="box">
+    <h3 id="pk-t"></h3>
+    <div id="pk-l"></div>
+    <button type="button" class="btn ghost full" data-close>Cancelar</button>
   </div>
 </div>
 
