@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Calwortime</title>
+<link rel="stylesheet" href="./css/styles.css">
+<script src="./js/chart.js" defer></script>
+<script src="./js/html2pdf.js" defer></script>
+<script src="./js/native-bridge.js" defer></script>
+<script src="./js/app.js" defer></script>
+</head>
+<body>
+
+<header>
+  <button class="hb" id="btn-menu" aria-label="Respaldos">☰</button>
+  <h1>Calwortime</h1>
+  <button class="hb" id="btn-perfil" aria-label="Perfil">👤</button>
+</header>
+
+<main id="main">
+
+  <section id="v-inicio" class="screen active">
+    <div class="hero">
+      <small id="fecha"></small>
+      <p id="tot-h">0.00 hrs acumuladas</p>
+      <h2 id="tot-m">Q 0.00</h2>
+      <div class="qa">
+        <button class="btn" data-go="registro">Nuevo turno</button>
+        <button class="btn ghost" data-go="informes">Reportes</button>
+      </div>
+    </div>
+    <div class="sheet">
+      <h3>Historial de jornadas</h3>
+      <small class="muted">Desliza un turno a la izquierda para editar o eliminar</small>
+      <div id="lista"></div>
+    </div>
+  </section>
+
+  <section id="v-registro" class="screen">
+    <div class="sheet">
+      <h3 id="form-titulo">Registrar jornada</h3>
+      <button type="button" class="btn ghost full" id="btn-ahora">Rellenar con hora actual</button>
+      <form id="f-jor" autocomplete="off">
+        <label>Fecha de entrada<input type="date" id="j-fecha" required></label>
+        <label>Hora de entrada<input type="text" id="j-ini" placeholder="00:00" readonly required></label>
+        <label>Hora de salida<input type="text" id="j-fin" placeholder="00:00" readonly required></label>
+        <label>Pausa no remunerada (minutos)<input type="number" id="j-pausa" value="0" min="0" inputmode="numeric"></label>
+        <label>Recargo festivo
+          <select id="j-fest">
+            <option value="none">Día normal (sin recargo)</option>
+            <option value="all">Todo el turno es festivo</option>
+            <option value="start">Solo entrada (antes de medianoche)</option>
+            <option value="end">Solo salida (después de medianoche)</option>
+          </select>
+        </label>
+        <label>Cliente o buque (opcional)<input type="text" id="j-notas" placeholder="Ej. Empresa / Buque / Turno extra"></label>
+        <button type="submit" class="btn full" id="btn-guardar">Guardar jornada</button>
+        <button type="button" class="btn ghost full" id="btn-cancelar" hidden>Cancelar edición</button>
+      </form>
+    </div>
+  </section>
+
+  <section id="v-informes" class="screen">
+    <div class="sheet">
+      <div class="bar">
+        <h3>Rendimiento</h3>
+        <select id="filtro">
+          <option value="15">15 días</option>
+          <option value="30">30 días</option>
+          <option value="all">Todo</option>
+        </select>
+      </div>
+      <div class="chart"><canvas id="grafica"></canvas></div>
+    </div>
+    <div class="sheet">
+      <h3>Informe</h3>
+      <div id="rep">
+        <div class="rep-head"><b>Reporte de horas</b><br><small id="rep-perfil"></small></div>
+        <div id="rep-por"></div>
+        <div id="rep-pag"></div>
+      </div>
+      <button class="btn full" id="btn-pdf">Compartir PDF</button>
+    </div>
+  </section>
+
+  <section id="v-perfil" class="screen">
+    <div class="sheet">
+      <h3>Datos laborales</h3>
+      <form id="f-perfil" autocomplete="off">
+        <label>Nombre o alias<input type="text" id="p-nombre" placeholder="Ej. Juan Pérez"></label>
+        <label>Moneda<input type="text" id="p-moneda" placeholder="Ej. Q o $" maxlength="5"></label>
+        <label>Tarifa por hora<input type="number" id="p-tarifa" step="0.01" min="0" inputmode="decimal" placeholder="Ej. 15.00"></label>
+        <label>Recargo festivo (%)<input type="number" id="p-festivo" min="0" inputmode="numeric" placeholder="Ej. 100"></label>
+        <button type="submit" class="btn full">Guardar perfil</button>
+      </form>
+    </div>
+  </section>
+
+</main>
+
+<nav class="nav">
+  <button data-v="inicio" class="active"><span>🏠</span>Inicio</button>
+  <button data-v="registro"><span>➕</span>Registro</button>
+  <button data-v="informes"><span>📊</span>Informes</button>
+  <button data-v="perfil"><span>👤</span>Perfil</button>
+</nav>
+
+<div id="m-hora" class="modal">
+  <div class="box">
+    <h3>Selecciona la hora</h3>
+    <div class="time"><select id="t-h"></select><b>:</b><select id="t-m"></select></div>
+    <div class="qa"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="t-ok">Aceptar</button></div>
+  </div>
+</div>
+
+<div id="m-borrar" class="modal">
+  <div class="box">
+    <h3 id="b-msg">¿Eliminar?</h3>
+    <div class="qa"><button class="btn ghost" data-close>Cancelar</button><button class="btn danger" id="b-ok">Eliminar</button></div>
+  </div>
+</div>
+
+<div id="m-menu" class="modal">
+  <div class="box">
+    <h3>Respaldos</h3>
+    <button class="btn full" id="btn-export">Exportar respaldo (JSON)</button>
+    <button class="btn ghost full" id="btn-import">Importar respaldo</button>
+    <input type="file" id="file-import" accept=".json,application/json" hidden>
+    <button class="btn ghost full" data-close>Cerrar</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+</body>
+</html>
