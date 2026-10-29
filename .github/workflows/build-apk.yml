@@ -1,0 +1,73 @@
+name: Compilar APK Calwortime
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '21'
+
+      # Firma fija: si subiste debug.keystore a la raiz del repositorio, se usa esa.
+      # Si no existe, se crea una y se guarda como artefacto para que la subas al repositorio.
+      - name: Preparar firma fija
+        run: |
+          mkdir -p ~/.android
+          if [ -f debug.keystore ]; then
+            cp debug.keystore ~/.android/debug.keystore
+            echo "Usando debug.keystore del repositorio"
+          else
+            keytool -genkeypair -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug" -noprompt
+            cp debug.keystore ~/.android/debug.keystore
+            echo "Firma nueva creada: descarga el artefacto debug-keystore y subelo a la raiz del repositorio"
+          fi
+
+      - name: Guardar firma generada (solo si no estaba en el repositorio)
+        if: hashFiles('debug.keystore') == ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-keystore
+          path: ~/.android/debug.keystore
+
+      - name: Preparar Capacitor y puente nativo
+        run: |
+          mkdir -p www/js
+          cp index.html www/
+          cp -r css www/
+          cp js/app.js www/js/
+
+          npm init -y
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7 @capacitor/assets chart.js@4.4.7 html2pdf.js@0.10.1 esbuild
+
+          cp node_modules/chart.js/dist/chart.umd.js www/js/chart.js
+          cp node_modules/html2pdf.js/dist/html2pdf.bundle.min.js www/js/html2pdf.js
+
+          cat << 'EOF' > native-bridge.js
+          import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+          import { Share } from '@capacitor/share';
+
+          window.NativeShare = async function (base64Data, filename) {
+            const r = await Filesystem.writeFile({ path: filename, data: base64Data, directory: Directory.Cache });
+            await Share.share({ title: 'Reporte de Calwortime', url: r.uri, dialogTitle: 'Compartir o guardar PDF' });
+          };
+
+          window.NativeSaveJSON = async function (jsonText, filename) {
+            const r = await Filesystem.writeFile({ path: filename, data: jsonText, directory: Directory.Cache, encoding: Encoding.UTF8 });
+            await Share.share({ title: 'Respaldo de Calwortime', url: r.uri, dialogTitle: 'Guardar o compartir respaldo' });
+          };
