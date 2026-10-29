@@ -231,6 +231,7 @@
   function resetForm() {
     editId = null;
     $('f-jor').reset();
+    setFest('none');
     $('j-fecha').value = today();
     $('j-pausa').value = 0;
     $('form-titulo').textContent = 'Registrar jornada';
@@ -247,7 +248,7 @@
     if (!s) return;
     editId = id;
     $('j-fecha').value = s.date; $('j-ini').value = s.start; $('j-fin').value = s.end;
-    $('j-pausa').value = s.pause; $('j-fest').value = s.fest; $('j-notas').value = s.notes || '';
+    $('j-pausa').value = s.pause; setFest(s.fest); $('j-notas').value = s.notes || '';
     $('form-titulo').textContent = 'Editar jornada';
     $('btn-guardar').textContent = 'Guardar cambios';
     $('btn-cancelar').hidden = false;
@@ -372,7 +373,6 @@
   $('c-ok').addEventListener('click', function () { $('j-fecha').value = cal.sel; closeM(); });
   $('b-ok').addEventListener('click', function () { var f = onYes; onYes = null; closeM(); if (f) f(); });
   $('btn-cancelar').addEventListener('click', function () { resetForm(); go('inicio'); });
-  $('filtro').addEventListener('change', renderReport);
   $('btn-pdf').addEventListener('click', pdf);
   $('btn-export').addEventListener('click', exportar);
   $('btn-import').addEventListener('click', function () { $('file-import').click(); });
@@ -406,6 +406,36 @@
     save(K.p, P);
     toast('Perfil guardado');
     go('inicio');
+  });
+
+  /* ---------- Selector de opciones propio ---------- */
+  var FEST = [['none', 'Día normal (sin recargo)'], ['all', 'Todo el turno es festivo'],
+    ['start', 'Solo entrada (antes de medianoche)'], ['end', 'Solo salida (después de medianoche)']];
+  var FILT = [['15', '15 días'], ['30', '30 días'], ['all', 'Todo']];
+  var pickCb = null;
+  function lbl(list, v) {
+    for (var i = 0; i < list.length; i++) if (list[i][0] === v) return list[i][1];
+    return list[0][1];
+  }
+  function setFest(v) { $('j-fest').value = v; $('j-fest-t').value = lbl(FEST, v); }
+  function setFilt(v) { $('filtro').value = v; $('filtro-t').textContent = lbl(FILT, v); }
+  function pick(title, opts, cur, cb) {
+    $('pk-t').textContent = title;
+    $('pk-l').innerHTML = opts.map(function (o) {
+      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" data-v="' + o[0] + '"><span>' + o[1] + '</span>' + ic('tick') + '</button>';
+    }).join('');
+    pickCb = cb;
+    openM('m-pick');
+  }
+  $('pk-l').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-v]');
+    if (!b) return;
+    var f = pickCb; pickCb = null; closeM();
+    if (f) f(b.dataset.v);
+  });
+  $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
+  $('filtro-b').addEventListener('click', function () {
+    pick('Periodo', FILT, $('filtro').value, function (v) { setFilt(v); renderReport(); });
   });
 
   /* ---------- Inicio de la app ---------- */
