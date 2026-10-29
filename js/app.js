@@ -1,13 +1,6 @@
 (function () {
   'use strict';
 
-  // Aviso visible si ocurre un error de JavaScript (para diagnosticar en el teléfono)
-  window.addEventListener('error', function (e) {
-    var d = document.createElement('div');
-    d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#ff5d5d;color:#1a0505;padding:10px;border-radius:10px;font-size:12px;font-weight:700';
-    d.textContent = 'Error: ' + e.message + ' (línea ' + (e.lineno || '?') + ')';
-    document.body.appendChild(d);
-  });
 
   var $ = function (id) { return document.getElementById(id); };
   var K = { p: 'calwortime_perfil', s: 'calwortime_turnos' };
@@ -36,17 +29,6 @@
   function today() {
     var d = new Date();
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
-  function fd(iso, o) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('es', o); }
-  function nextDay(iso) {
-    var p = iso.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2] + 1);
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
-  function rango(s) {
-    if (s.end > s.start) return fd(s.date, { weekday: 'short', day: 'numeric', month: 'short' });
-    var e = nextDay(s.date), a = s.date.split('-'), b = e.split('-');
-    if (a[1] === b[1]) return 'Del ' + (+a[2]) + ' al ' + (+b[2]) + ' ' + fd(e, { month: 'short' });
-    return 'Del ' + fd(s.date, { day: 'numeric', month: 'short' }) + ' al ' + fd(e, { day: 'numeric', month: 'short' });
   }
   function money(n) { return P.moneda + ' ' + n.toFixed(2); }
   function toast(m) {
@@ -82,7 +64,7 @@
     return '<div class="row"><div class="acts">' +
       '<button data-a="edit" data-id="' + s.id + '">' + ic('edit') + '</button>' +
       '<button data-a="del" data-id="' + s.id + '" class="d">' + ic('trash') + '</button></div>' +
-      '<div class="item"><div><b>' + rango(s) + '</b><small>' + s.start + ' - ' + s.end +
+      '<div class="item"><div><b>' + s.date + '</b><small>' + s.start + ' - ' + s.end +
       (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
       '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
       '<button data-a="pay" data-id="' + s.id + '" class="bd ' + (s.paid ? 'ok' : '') + '">' +
@@ -94,24 +76,22 @@
     $('tot-h').textContent = h.toFixed(2) + ' hrs acumuladas';
     $('tot-m').textContent = money(m);
     $('fecha').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
-    var l = sorted();
+    var l = sorted().slice(0, 15);
     $('lista').innerHTML = l.length ? l.map(row).join('') : '<p class="empty">No hay jornadas registradas. Toca "Nuevo turno" para empezar.</p>';
     open = null;
   }
 
   /* ---------- Deslizar para opciones (sin bloquear el scroll) ---------- */
-  var sx = 0, sy = 0, cur = null, open = null, W = 110;
+  var sx = 0, cur = null, open = null, W = 110;
   var L = $('lista');
   L.addEventListener('touchstart', function (e) {
     var it = e.target.closest('.item');
     if (!it) return;
-    cur = it; sx = e.touches[0].clientX; sy = e.touches[0].clientY; it.style.transition = 'none';
+    cur = it; sx = e.touches[0].clientX; it.style.transition = 'none';
   }, { passive: true });
   L.addEventListener('touchmove', function (e) {
     if (!cur) return;
-    var raw = e.touches[0].clientX - sx;
-    if (Math.abs(e.touches[0].clientY - sy) > Math.abs(raw)) return;
-    var dx = raw + (cur.dataset.o === '1' ? -W : 0);
+    var dx = e.touches[0].clientX - sx + (cur.dataset.o === '1' ? -W : 0);
     cur.style.transform = 'translateX(' + Math.max(-W, Math.min(0, dx)) + 'px)';
   }, { passive: true });
   function endSwipe() {
@@ -137,8 +117,8 @@
     if (!arr.length) return html + '<p class="empty">Sin registros</p>';
     return html + arr.map(function (s) {
       var c = calc(s);
-      return '<div class="rr"><span><b>' + rango(s) + '</b><br><small>' + s.start + ' - ' + s.end +
-        (s.notes ? ' · ' + esc(s.notes) : '') + '</small></span>' +
+      return '<div class="rr"><span>' + s.date + ' ' + s.start + '-' + s.end +
+        (s.notes ? '<br><small>' + esc(s.notes) + '</small>' : '') + '</span>' +
         '<span>' + c.h.toFixed(2) + ' h<br><b class="lime">' + money(c.pay) + '</b></span>' +
         '<button class="x" data-a="del" data-id="' + s.id + '" aria-label="Eliminar">' + ic('x') + '</button></div>';
     }).join('');
@@ -443,4 +423,26 @@
   function pick(title, opts, cur, cb) {
     $('pk-t').textContent = title;
     $('pk-l').innerHTML = opts.map(function (o) {
-      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" d
+      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" data-v="' + o[0] + '"><span>' + o[1] + '</span>' + ic('tick') + '</button>';
+    }).join('');
+    pickCb = cb;
+    openM('m-pick');
+  }
+  $('pk-l').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-v]');
+    if (!b) return;
+    var f = pickCb; pickCb = null; closeM();
+    if (f) f(b.dataset.v);
+  });
+  $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
+  $('filtro-b').addEventListener('click', function () {
+    pick('Periodo', FILT, $('filtro').value, function (v) { setFilt(v); renderReport(); });
+  });
+
+  /* ---------- Inicio de la app ---------- */
+  buildWheel('w-h', 24);
+  buildWheel('w-m', 60);
+  resetForm();
+  go('inicio');
+})();
+        
