@@ -166,3 +166,10 @@ label{font-weight:500;letter-spacing:.01em}
 #lista{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;margin:0 -4px;padding:0 4px 6px}
 .qa .btn{white-space:nowrap;padding:12px 8px}
 .bd{white-space:nowrap}
+
+/* Recuadro fijo con sticky (sin contenedores de scroll anidados) */
+#v-inicio.active{display:block;height:auto;overflow:visible}
+.hero-wrap{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 14px 10px}
+.hero-wrap .hero{margin:0}
+.sheet.hist{display:block;flex:none;margin-top:4px}
+#lista{overflow:visible;flex:none;margin:0;padding:0}
