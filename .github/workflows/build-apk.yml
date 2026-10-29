@@ -71,3 +71,30 @@ jobs:
             const r = await Filesystem.writeFile({ path: filename, data: jsonText, directory: Directory.Cache, encoding: Encoding.UTF8 });
             await Share.share({ title: 'Respaldo de Calwortime', url: r.uri, dialogTitle: 'Guardar o compartir respaldo' });
           };
+          EOF
+
+          npx esbuild native-bridge.js --bundle --outfile=www/js/native-bridge.js
+
+          npx cap init "Calwortime" "com.calwortime.app" --web-dir www
+          npx cap add android
+
+          if [ -f icon.png ]; then
+            mkdir -p assets
+            cp icon.png assets/icon.png
+            npx @capacitor/assets generate --android
+          fi
+
+          npx cap sync android
+
+      - name: Compilar el APK con Gradle
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      - name: Guardar el APK generado
+        uses: actions/upload-artifact@v4
+        with:
+          name: Calwortime-APK
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          
