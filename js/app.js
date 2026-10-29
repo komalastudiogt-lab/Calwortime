@@ -1,0 +1,350 @@
+(function () {
+  'use strict';
+
+  var $ = function (id) { return document.getElementById(id); };
+  var K = { p: 'calwortime_perfil', s: 'calwortime_turnos' };
+
+  function load(k, d) {
+    try { var v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; }
+    catch (e) { return d; }
+  }
+  function save(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); }
+    catch (e) { toast('No se pudo guardar'); }
+  }
+
+  var P = Object.assign({ nombre: '', moneda: 'Q', tarifa: 0, festivo: 100 }, load(K.p, {}));
+  var S = load(K.s, []);
+  if (!Array.isArray(S)) S = [];
+  var editId = null, timeTarget = null, onYes = null, chart = null;
+
+  var pad = function (n) { return String(n).padStart(2, '0'); };
+  var esc = function (t) {
+    return String(t).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  };
+  function today() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function money(n) { return P.moneda + ' ' + n.toFixed(2); }
+  function toast(m) {
+    var t = $('toast');
+    t.textContent = m;
+    t.classList.add('show');
+    setTimeout(function () { t.classList.remove('show'); }, 2200);
+  }
+
+  /* ---------- Cálculo: cruza medianoche, pausas y recargo festivo ---------- */
+  function calc(s) {
+    var a = new Date(s.date + 'T' + s.start);
+    var b = new Date(s.date + 'T' + s.end);
+    if (b <= a) b = new Date(b.getTime() + 864e5);
+    var total = (b - a) / 6e4;
+    var mid = new Date(a); mid.setHours(24, 0, 0, 0);
+    var f = 0;
+    if (s.fest === 'all') f = total;
+    else if (s.fest === 'start') f = Math.min(total, (mid - a) / 6e4);
+    else if (s.fest === 'end') f = Math.max(0, (b - mid) / 6e4);
+    var net = Math.max(0, total - (+s.pause || 0));
+    f = Math.min(f, net);
+    var h = net / 60, fh = f / 60;
+    return { h: h, fh: fh, pay: h * P.tarifa + fh * P.tarifa * P.festivo / 100 };
+  }
+  function sorted() {
+    return S.slice().sort(function (x, y) { return (y.date + y.start).localeCompare(x.date + x.start); });
+  }
+
+  /* ---------- Inicio ---------- */
+  function row(s) {
+    var c = calc(s);
+    return '<div class="row"><div class="acts">' +
+      '<button data-a="edit" data-id="' + s.id + '">✎</button>' +
+      '<button data-a="del" data-id="' + s.id + '" class="d">🗑</button></div>' +
+      '<div class="item"><div><b>' + s.date + '</b><small>' + s.start + ' - ' + s.end +
+      (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
+      '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
+      '<button data-a="pay" data-id="' + s.id + '" class="bd ' + (s.paid ? 'ok' : '') + '">' +
+      (s.paid ? 'Pagado' : 'Por cobrar') + '</button></div></div></div>';
+  }
+  function renderHome() {
+    var h = 0, m = 0;
+    S.forEach(function (s) { var c = calc(s); h += c.h; m += c.pay; });
+    $('tot-h').textContent = h.toFixed(2) + ' hrs acumuladas';
+    $('tot-m').textContent = money(m);
+    $('fecha').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+    var l = sorted().slice(0, 15);
+    $('lista').innerHTML = l.length ? l.map(row).join('') : '<p class="empty">No hay jornadas registradas. Toca "Nuevo turno" para empezar.</p>';
+    open = null;
+  }
+
+  /* ---------- Deslizar para opciones (sin bloquear el scroll) ---------- */
+  var sx = 0, cur = null, open = null, W = 110;
+  var L = $('lista');
+  L.addEventListener('touchstart', function (e) {
+    var it = e.target.closest('.item');
+    if (!it) return;
+    cur = it; sx = e.touches[0].clientX; it.style.transition = 'none';
+  }, { passive: true });
+  L.addEventListener('touchmove', function (e) {
+    if (!cur) return;
+    var dx = e.touches[0].clientX - sx + (cur.dataset.o === '1' ? -W : 0);
+    cur.style.transform = 'translateX(' + Math.max(-W, Math.min(0, dx)) + 'px)';
+  }, { passive: true });
+  function endSwipe() {
+    if (!cur) return;
+    var x = new DOMMatrix(getComputedStyle(cur).transform).m41;
+    var o = x < -W / 2;
+    cur.style.transition = '';
+    cur.style.transform = o ? 'translateX(-' + W + 'px)' : '';
+    cur.dataset.o = o ? '1' : '0';
+    if (o && open && open !== cur) { open.style.transform = ''; open.dataset.o = '0'; }
+    open = o ? cur : null;
+    cur = null;
+  }
+  L.addEventListener('touchend', endSwipe);
+  L.addEventListener('touchcancel', endSwipe);
+
+  /* ---------- Informes ---------- */
+  function block(titulo, arr) {
+    var m = 0, h = 0;
+    arr.forEach(function (s) { var c = calc(s); m += c.pay; h += c.h; });
+    var html = '<h4>' + titulo + ' <span class="lime">' + money(m) + '</span></h4><small>' +
+      h.toFixed(2) + ' hrs · ' + arr.length + ' turnos</small>';
+    if (!arr.length) return html + '<p class="empty">Sin registros</p>';
+    return html + arr.map(function (s) {
+      var c = calc(s);
+      return '<div class="rr"><span>' + s.date + ' ' + s.start + '-' + s.end +
+        (s.notes ? '<br><small>' + esc(s.notes) + '</small>' : '') + '</span>' +
+        '<span>' + c.h.toFixed(2) + ' h<br><b class="lime">' + money(c.pay) + '</b></span>' +
+        '<button class="x" data-a="del" data-id="' + s.id + '" aria-label="Eliminar">✕</button></div>';
+    }).join('');
+  }
+  function renderReport() {
+    var f = $('filtro').value;
+    var from = f === 'all' ? null : new Date(Date.now() - (+f) * 864e5);
+    var list = sorted().filter(function (s) { return !from || new Date(s.date + 'T00:00') >= from; });
+    $('rep-perfil').textContent = (P.nombre || 'Trabajador') + ' · Tarifa ' + money(P.tarifa) + '/h';
+    $('rep-por').innerHTML = block('⏳ Por Cobrar', list.filter(function (s) { return !s.paid; }));
+    $('rep-pag').innerHTML = block('✅ Pagados (Cobrados)', list.filter(function (s) { return s.paid; }));
+    drawChart(list);
+  }
+  function drawChart(list) {
+    if (!window.Chart) return;
+    var by = {};
+    list.forEach(function (s) { by[s.date] = (by[s.date] || 0) + calc(s).pay; });
+    var k = Object.keys(by).sort();
+    if (chart) chart.destroy();
+    chart = new Chart($('grafica'), {
+      type: 'bar',
+      data: {
+        labels: k.map(function (d) { return d.slice(5); }),
+        datasets: [{ data: k.map(function (d) { return +by[d].toFixed(2); }),
+          backgroundColor: '#1558C9', borderColor: '#D4FF24', borderWidth: 1, borderRadius: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: '#7f8aa3' }, grid: { display: false } },
+          y: { ticks: { color: '#7f8aa3' }, grid: { color: 'rgba(21,88,201,.15)' } }
+        }
+      }
+    });
+  }
+
+  /* ---------- Navegación ---------- */
+  function go(v) {
+    document.querySelectorAll('.screen').forEach(function (e) { e.classList.toggle('active', e.id === 'v-' + v); });
+    document.querySelectorAll('.nav button').forEach(function (b) { b.classList.toggle('active', b.dataset.v === v); });
+    $('main').scrollTop = 0;
+    if (v === 'inicio') renderHome();
+    if (v === 'informes') renderReport();
+    if (v === 'perfil') fillProfile();
+    if (v === 'registro' && !editId && !$('j-fecha').value) $('j-fecha').value = today();
+  }
+  function refresh() {
+    renderHome();
+    if ($('v-informes').classList.contains('active')) renderReport();
+  }
+
+  /* ---------- Modales ---------- */
+  function openM(id) { $(id).classList.add('open'); }
+  function closeM() { document.querySelectorAll('.modal').forEach(function (m) { m.classList.remove('open'); }); }
+  function ask(msg, fn) { $('b-msg').textContent = msg; onYes = fn; openM('m-borrar'); }
+
+  function fillTimeSelects() {
+    var h = '', m = '';
+    for (var i = 0; i < 24; i++) h += '<option>' + pad(i) + '</option>';
+    for (var j = 0; j < 60; j++) m += '<option>' + pad(j) + '</option>';
+    $('t-h').innerHTML = h; $('t-m').innerHTML = m;
+  }
+  function openTime(id) {
+    timeTarget = id;
+    var v = $(id).value || '08:00';
+    $('t-h').value = v.slice(0, 2); $('t-m').value = v.slice(3, 5);
+    openM('m-hora');
+  }
+
+  /* ---------- Formulario de jornada ---------- */
+  function resetForm() {
+    editId = null;
+    $('f-jor').reset();
+    $('j-fecha').value = today();
+    $('j-pausa').value = 0;
+    $('form-titulo').textContent = 'Registrar jornada';
+    $('btn-guardar').textContent = 'Guardar jornada';
+    $('btn-cancelar').hidden = true;
+  }
+  function setNow() {
+    var d = new Date();
+    $('j-fecha').value = today();
+    $('j-ini').value = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+  function startEdit(id) {
+    var s = S.find(function (x) { return x.id === id; });
+    if (!s) return;
+    editId = id;
+    $('j-fecha').value = s.date; $('j-ini').value = s.start; $('j-fin').value = s.end;
+    $('j-pausa').value = s.pause; $('j-fest').value = s.fest; $('j-notas').value = s.notes || '';
+    $('form-titulo').textContent = 'Editar jornada';
+    $('btn-guardar').textContent = 'Guardar cambios';
+    $('btn-cancelar').hidden = false;
+    go('registro');
+  }
+
+  /* ---------- Perfil ---------- */
+  function fillProfile() {
+    $('p-nombre').value = P.nombre; $('p-moneda').value = P.moneda;
+    $('p-tarifa').value = P.tarifa || ''; $('p-festivo').value = P.festivo;
+  }
+
+  /* ---------- Respaldos y PDF ---------- */
+  function download(blob, name) {
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  }
+  function exportar() {
+    var json = JSON.stringify({ app: 'Calwortime', version: 1, perfil: P, turnos: S }, null, 2);
+    var name = 'calwortime-respaldo-' + today() + '.json';
+    closeM();
+    if (window.NativeSaveJSON) {
+      window.NativeSaveJSON(json, name).catch(function () { toast('No se pudo exportar'); });
+    } else {
+      download(new Blob([json], { type: 'application/json' }), name);
+    }
+  }
+  function importar(file) {
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var d = JSON.parse(r.result);
+        if (!d || typeof d.perfil !== 'object' || !Array.isArray(d.turnos)) throw new Error('formato');
+        var ok = d.turnos.filter(function (s) { return s && s.date && s.start && s.end; }).map(function (s, i) {
+          return { id: s.id || (Date.now().toString(36) + i), date: s.date, start: s.start, end: s.end,
+            pause: +s.pause || 0, fest: s.fest || 'none', notes: s.notes || '', paid: !!s.paid };
+        });
+        P = Object.assign({ nombre: '', moneda: 'Q', tarifa: 0, festivo: 100 }, d.perfil);
+        S = ok;
+        save(K.p, P); save(K.s, S);
+        closeM(); refresh(); toast('Respaldo restaurado: ' + ok.length + ' turnos');
+      } catch (e) { toast('El archivo no es un respaldo válido'); }
+    };
+    r.onerror = function () { toast('No se pudo leer el archivo'); };
+    r.readAsText(file);
+  }
+  function pdf() {
+    if (!window.html2pdf) return toast('El PDF no está disponible');
+    document.body.classList.add('pdf');
+    var name = 'calwortime-reporte-' + today() + '.pdf';
+    window.html2pdf()
+      .set({ margin: 8, filename: name, html2canvas: { scale: 2, backgroundColor: '#030407' },
+        jsPDF: { unit: 'mm', format: 'a4' } })
+      .from($('rep')).outputPdf('datauristring')
+      .then(function (uri) {
+        var b64 = uri.split(',')[1];
+        if (window.NativeShare) return window.NativeShare(b64, name);
+        var bin = atob(b64), arr = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        download(new Blob([arr], { type: 'application/pdf' }), name);
+      })
+      .catch(function () { toast('No se pudo crear el PDF'); })
+      .then(function () { document.body.classList.remove('pdf'); });
+  }
+
+  /* ---------- Eventos ---------- */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-a]');
+    if (b) {
+      var id = b.dataset.id, a = b.dataset.a;
+      if (a === 'pay') {
+        var s = S.find(function (x) { return x.id === id; });
+        if (s) { s.paid = !s.paid; save(K.s, S); refresh(); }
+      } else if (a === 'del') {
+        ask('¿Eliminar esta jornada?', function () {
+          S = S.filter(function (x) { return x.id !== id; });
+          save(K.s, S); refresh(); toast('Jornada eliminada');
+        });
+      } else if (a === 'edit') startEdit(id);
+      return;
+    }
+    var g = e.target.closest('[data-go]'); if (g) return go(g.dataset.go);
+    var n = e.target.closest('.nav button'); if (n) return go(n.dataset.v);
+    if (e.target.closest('[data-close]') || e.target.classList.contains('modal')) closeM();
+  });
+
+  $('btn-menu').addEventListener('click', function () { openM('m-menu'); });
+  $('btn-perfil').addEventListener('click', function () { go('perfil'); });
+  $('btn-ahora').addEventListener('click', setNow);
+  $('j-ini').addEventListener('click', function () { openTime('j-ini'); });
+  $('j-fin').addEventListener('click', function () { openTime('j-fin'); });
+  $('t-ok').addEventListener('click', function () {
+    $(timeTarget).value = $('t-h').value + ':' + $('t-m').value; closeM();
+  });
+  $('b-ok').addEventListener('click', function () { var f = onYes; onYes = null; closeM(); if (f) f(); });
+  $('btn-cancelar').addEventListener('click', function () { resetForm(); go('inicio'); });
+  $('filtro').addEventListener('change', renderReport);
+  $('btn-pdf').addEventListener('click', pdf);
+  $('btn-export').addEventListener('click', exportar);
+  $('btn-import').addEventListener('click', function () { $('file-import').click(); });
+  $('file-import').addEventListener('change', function (e) {
+    if (e.target.files[0]) importar(e.target.files[0]);
+    e.target.value = '';
+  });
+
+  $('f-jor').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var s = { id: editId || Date.now().toString(36), date: $('j-fecha').value, start: $('j-ini').value,
+      end: $('j-fin').value, pause: +$('j-pausa').value || 0, fest: $('j-fest').value,
+      notes: $('j-notas').value.trim(), paid: false };
+    if (!s.date || !s.start || !s.end) return toast('Completa la fecha y las horas');
+    if (editId) {
+      var old = S.find(function (x) { return x.id === editId; });
+      s.paid = old ? old.paid : false;
+      S = S.map(function (x) { return x.id === editId ? s : x; });
+    } else S.push(s);
+    save(K.s, S);
+    resetForm();
+    toast(P.tarifa > 0 ? 'Jornada guardada' : 'Guardada. Configura tu tarifa en Perfil');
+    go('inicio');
+  });
+
+  $('f-perfil').addEventListener('submit', function (e) {
+    e.preventDefault();
+    P = { nombre: $('p-nombre').value.trim(), moneda: $('p-moneda').value.trim() || 'Q',
+      tarifa: Math.max(0, parseFloat($('p-tarifa').value) || 0),
+      festivo: Math.max(0, parseFloat($('p-festivo').value) || 0) };
+    save(K.p, P);
+    toast('Perfil guardado');
+    go('inicio');
+  });
+
+  /* ---------- Inicio de la app ---------- */
+  fillTimeSelects();
+  resetForm();
+  go('inicio');
+})();
+                          
