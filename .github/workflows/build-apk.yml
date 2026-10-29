@@ -24,26 +24,25 @@ jobs:
           distribution: 'zulu'
           java-version: '21'
 
-      # Firma fija: si subiste debug.keystore a la raiz del repositorio, se usa esa.
-      # Si no existe, se crea una y se guarda como artefacto para que la subas al repositorio.
       - name: Preparar firma fija
+        id: firma
         run: |
           mkdir -p ~/.android
           if [ -f debug.keystore ]; then
             cp debug.keystore ~/.android/debug.keystore
-            echo "Usando debug.keystore del repositorio"
+            echo "nueva=false" >> "$GITHUB_OUTPUT"
           else
             keytool -genkeypair -keystore debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "C=US, O=Android, CN=Android Debug" -noprompt
             cp debug.keystore ~/.android/debug.keystore
-            echo "Firma nueva creada: descarga el artefacto debug-keystore y subelo a la raiz del repositorio"
+            echo "nueva=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Guardar firma generada (solo si no estaba en el repositorio)
-        if: hashFiles('debug.keystore') == ''
+      - name: Guardar firma nueva (descargala y subela al repositorio)
+        if: steps.firma.outputs.nueva == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: debug-keystore
-          path: ~/.android/debug.keystore
+          path: debug.keystore
 
       - name: Preparar Capacitor y puente nativo
         run: |
@@ -53,10 +52,12 @@ jobs:
           cp js/app.js www/js/
 
           npm init -y
-          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7 @capacitor/assets chart.js@4.4.7 html2pdf.js@0.10.1 esbuild
+          npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7 @capacitor/assets chart.js@4.4.7 html2pdf.js@0.10.1 @fontsource/space-grotesk@5 esbuild
 
           cp node_modules/chart.js/dist/chart.umd.js www/js/chart.js
           cp node_modules/html2pdf.js/dist/html2pdf.bundle.min.js www/js/html2pdf.js
+          mkdir -p www/fonts
+          cp node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-{400,500,700}-normal.woff2 www/fonts/ || true
 
           cat << 'EOF' > native-bridge.js
           import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -97,4 +98,3 @@ jobs:
         with:
           name: Calwortime-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
-          
