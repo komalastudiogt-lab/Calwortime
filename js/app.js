@@ -29,6 +29,17 @@
     var d = new Date();
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
+  function fd(iso, o) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('es', o); }
+  function nextDay(iso) {
+    var p = iso.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2] + 1);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function rango(s) {
+    if (s.end > s.start) return fd(s.date, { weekday: 'short', day: 'numeric', month: 'short' });
+    var e = nextDay(s.date), a = s.date.split('-'), b = e.split('-');
+    if (a[1] === b[1]) return 'Del ' + (+a[2]) + ' al ' + (+b[2]) + ' ' + fd(e, { month: 'short' });
+    return 'Del ' + fd(s.date, { day: 'numeric', month: 'short' }) + ' al ' + fd(e, { day: 'numeric', month: 'short' });
+  }
   function money(n) { return P.moneda + ' ' + n.toFixed(2); }
   function toast(m) {
     var t = $('toast');
@@ -63,7 +74,7 @@
     return '<div class="row"><div class="acts">' +
       '<button data-a="edit" data-id="' + s.id + '">' + ic('edit') + '</button>' +
       '<button data-a="del" data-id="' + s.id + '" class="d">' + ic('trash') + '</button></div>' +
-      '<div class="item"><div><b>' + s.date + '</b><small>' + s.start + ' - ' + s.end +
+      '<div class="item"><div><b>' + rango(s) + '</b><small>' + s.start + ' - ' + s.end +
       (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
       '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
       '<button data-a="pay" data-id="' + s.id + '" class="bd ' + (s.paid ? 'ok' : '') + '">' +
@@ -75,22 +86,24 @@
     $('tot-h').textContent = h.toFixed(2) + ' hrs acumuladas';
     $('tot-m').textContent = money(m);
     $('fecha').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
-    var l = sorted().slice(0, 15);
+    var l = sorted();
     $('lista').innerHTML = l.length ? l.map(row).join('') : '<p class="empty">No hay jornadas registradas. Toca "Nuevo turno" para empezar.</p>';
     open = null;
   }
 
   /* ---------- Deslizar para opciones (sin bloquear el scroll) ---------- */
-  var sx = 0, cur = null, open = null, W = 110;
+  var sx = 0, sy = 0, cur = null, open = null, W = 110;
   var L = $('lista');
   L.addEventListener('touchstart', function (e) {
     var it = e.target.closest('.item');
     if (!it) return;
-    cur = it; sx = e.touches[0].clientX; it.style.transition = 'none';
+    cur = it; sx = e.touches[0].clientX; sy = e.touches[0].clientY; it.style.transition = 'none';
   }, { passive: true });
   L.addEventListener('touchmove', function (e) {
     if (!cur) return;
-    var dx = e.touches[0].clientX - sx + (cur.dataset.o === '1' ? -W : 0);
+    var raw = e.touches[0].clientX - sx;
+    if (Math.abs(e.touches[0].clientY - sy) > Math.abs(raw)) return;
+    var dx = raw + (cur.dataset.o === '1' ? -W : 0);
     cur.style.transform = 'translateX(' + Math.max(-W, Math.min(0, dx)) + 'px)';
   }, { passive: true });
   function endSwipe() {
@@ -116,8 +129,8 @@
     if (!arr.length) return html + '<p class="empty">Sin registros</p>';
     return html + arr.map(function (s) {
       var c = calc(s);
-      return '<div class="rr"><span>' + s.date + ' ' + s.start + '-' + s.end +
-        (s.notes ? '<br><small>' + esc(s.notes) + '</small>' : '') + '</span>' +
+      return '<div class="rr"><span><b>' + rango(s) + '</b><br><small>' + s.start + ' - ' + s.end +
+        (s.notes ? ' · ' + esc(s.notes) : '') + '</small></span>' +
         '<span>' + c.h.toFixed(2) + ' h<br><b class="lime">' + money(c.pay) + '</b></span>' +
         '<button class="x" data-a="del" data-id="' + s.id + '" aria-label="Eliminar">' + ic('x') + '</button></div>';
     }).join('');
@@ -434,13 +447,4 @@
     if (f) f(b.dataset.v);
   });
   $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
-  $('filtro-b').addEventListener('click', function () {
-    pick('Periodo', FILT, $('filtro').value, function (v) { setFilt(v); renderReport(); });
-  });
-
-  /* ---------- Inicio de la app ---------- */
-  buildWheel('w-h', 24);
-  buildWheel('w-m', 60);
-  resetForm();
-  go('inicio');
-})();
+  $('filtro-b').addEventListen
