@@ -24,6 +24,7 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   };
+  function ic(n) { return '<svg class="ic"><use href="#i-' + n + '"/></svg>'; }
   function today() {
     var d = new Date();
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -60,8 +61,8 @@
   function row(s) {
     var c = calc(s);
     return '<div class="row"><div class="acts">' +
-      '<button data-a="edit" data-id="' + s.id + '">✎</button>' +
-      '<button data-a="del" data-id="' + s.id + '" class="d">🗑</button></div>' +
+      '<button data-a="edit" data-id="' + s.id + '">' + ic('edit') + '</button>' +
+      '<button data-a="del" data-id="' + s.id + '" class="d">' + ic('trash') + '</button></div>' +
       '<div class="item"><div><b>' + s.date + '</b><small>' + s.start + ' - ' + s.end +
       (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
       '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
@@ -110,7 +111,7 @@
   function block(titulo, arr) {
     var m = 0, h = 0;
     arr.forEach(function (s) { var c = calc(s); m += c.pay; h += c.h; });
-    var html = '<h4>' + titulo + ' <span class="lime">' + money(m) + '</span></h4><small>' +
+    var html = '<h4><span class="t">' + titulo + '</span><span class="lime">' + money(m) + '</span></h4><small>' +
       h.toFixed(2) + ' hrs · ' + arr.length + ' turnos</small>';
     if (!arr.length) return html + '<p class="empty">Sin registros</p>';
     return html + arr.map(function (s) {
@@ -118,7 +119,7 @@
       return '<div class="rr"><span>' + s.date + ' ' + s.start + '-' + s.end +
         (s.notes ? '<br><small>' + esc(s.notes) + '</small>' : '') + '</span>' +
         '<span>' + c.h.toFixed(2) + ' h<br><b class="lime">' + money(c.pay) + '</b></span>' +
-        '<button class="x" data-a="del" data-id="' + s.id + '" aria-label="Eliminar">✕</button></div>';
+        '<button class="x" data-a="del" data-id="' + s.id + '" aria-label="Eliminar">' + ic('x') + '</button></div>';
     }).join('');
   }
   function renderReport() {
@@ -126,8 +127,8 @@
     var from = f === 'all' ? null : new Date(Date.now() - (+f) * 864e5);
     var list = sorted().filter(function (s) { return !from || new Date(s.date + 'T00:00') >= from; });
     $('rep-perfil').textContent = (P.nombre || 'Trabajador') + ' · Tarifa ' + money(P.tarifa) + '/h';
-    $('rep-por').innerHTML = block('⏳ Por Cobrar', list.filter(function (s) { return !s.paid; }));
-    $('rep-pag').innerHTML = block('✅ Pagados (Cobrados)', list.filter(function (s) { return s.paid; }));
+    $('rep-por').innerHTML = block(ic('clock') + 'Por Cobrar', list.filter(function (s) { return !s.paid; }));
+    $('rep-pag').innerHTML = block(ic('check') + 'Pagados (Cobrados)', list.filter(function (s) { return s.paid; }));
     drawChart(list);
   }
   function drawChart(list) {
@@ -174,17 +175,56 @@
   function closeM() { document.querySelectorAll('.modal').forEach(function (m) { m.classList.remove('open'); }); }
   function ask(msg, fn) { $('b-msg').textContent = msg; onYes = fn; openM('m-borrar'); }
 
-  function fillTimeSelects() {
-    var h = '', m = '';
-    for (var i = 0; i < 24; i++) h += '<option>' + pad(i) + '</option>';
-    for (var j = 0; j < 60; j++) m += '<option>' + pad(j) + '</option>';
-    $('t-h').innerHTML = h; $('t-m').innerHTML = m;
+  /* ---------- Ruedas de hora y calendario propios ---------- */
+  var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  var cal = { y: 0, m: 0, sel: '' };
+  function buildWheel(id, n) {
+    var h = '';
+    for (var i = 0; i < n; i++) h += '<div class="wi" data-i="' + i + '">' + pad(i) + '</div>';
+    $(id).innerHTML = h;
+  }
+  function wheelVal(id) {
+    var c = $(id);
+    return Math.max(0, Math.min(Math.round(c.scrollTop / 44), c.children.length - 1));
+  }
+  function wheelMark(id) {
+    var v = wheelVal(id);
+    Array.prototype.forEach.call($(id).children, function (e, i) { e.classList.toggle('sel', i === v); });
+  }
+  function wheelSet(id, i, smooth) {
+    $(id).scrollTo({ top: i * 44, behavior: smooth ? 'smooth' : 'auto' });
+    wheelMark(id);
   }
   function openTime(id) {
     timeTarget = id;
     var v = $(id).value || '08:00';
-    $('t-h').value = v.slice(0, 2); $('t-m').value = v.slice(3, 5);
     openM('m-hora');
+    wheelSet('w-h', +v.slice(0, 2));
+    wheelSet('w-m', +v.slice(3, 5));
+  }
+  function drawCal(dir) {
+    $('c-titulo').textContent = MESES[cal.m] + ' ' + cal.y;
+    var first = new Date(cal.y, cal.m, 1).getDay();
+    var days = new Date(cal.y, cal.m + 1, 0).getDate();
+    var t = today(), h = '', i;
+    for (i = 0; i < first; i++) h += '<span></span>';
+    for (i = 1; i <= days; i++) {
+      var ds = cal.y + '-' + pad(cal.m + 1) + '-' + pad(i);
+      h += '<button type="button" class="day' + (ds === cal.sel ? ' sel' : '') + (ds === t ? ' hoy' : '') +
+        '" data-d="' + ds + '">' + i + '</button>';
+    }
+    var g = $('c-grid');
+    g.innerHTML = h;
+    g.classList.remove('l', 'r');
+    void g.offsetWidth;
+    if (dir) g.classList.add(dir > 0 ? 'r' : 'l');
+  }
+  function openCal() {
+    var v = $('j-fecha').value || today();
+    var p = v.split('-');
+    cal.y = +p[0]; cal.m = +p[1] - 1; cal.sel = v;
+    drawCal(0);
+    openM('m-fecha');
   }
 
   /* ---------- Formulario de jornada ---------- */
@@ -301,9 +341,35 @@
   $('btn-ahora').addEventListener('click', setNow);
   $('j-ini').addEventListener('click', function () { openTime('j-ini'); });
   $('j-fin').addEventListener('click', function () { openTime('j-fin'); });
-  $('t-ok').addEventListener('click', function () {
-    $(timeTarget).value = $('t-h').value + ':' + $('t-m').value; closeM();
+  ['w-h', 'w-m'].forEach(function (id) {
+    var t = 0;
+    $(id).addEventListener('scroll', function () {
+      if (t) return;
+      t = requestAnimationFrame(function () { t = 0; wheelMark(id); });
+    }, { passive: true });
+    $(id).addEventListener('click', function (e) {
+      if (e.target.dataset.i) wheelSet(id, +e.target.dataset.i, true);
+    });
   });
+  $('t-ok').addEventListener('click', function () {
+    $(timeTarget).value = pad(wheelVal('w-h')) + ':' + pad(wheelVal('w-m'));
+    closeM();
+  });
+  $('j-fecha').addEventListener('click', openCal);
+  $('c-prev').addEventListener('click', function () { cal.m--; if (cal.m < 0) { cal.m = 11; cal.y--; } drawCal(-1); });
+  $('c-next').addEventListener('click', function () { cal.m++; if (cal.m > 11) { cal.m = 0; cal.y++; } drawCal(1); });
+  $('c-grid').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-d]');
+    if (!b) return;
+    cal.sel = b.dataset.d;
+    Array.prototype.forEach.call(this.querySelectorAll('.day'), function (x) { x.classList.toggle('sel', x === b); });
+  });
+  $('c-hoy').addEventListener('click', function () {
+    var p = today().split('-');
+    cal.y = +p[0]; cal.m = +p[1] - 1; cal.sel = today();
+    drawCal(0);
+  });
+  $('c-ok').addEventListener('click', function () { $('j-fecha').value = cal.sel; closeM(); });
   $('b-ok').addEventListener('click', function () { var f = onYes; onYes = null; closeM(); if (f) f(); });
   $('btn-cancelar').addEventListener('click', function () { resetForm(); go('inicio'); });
   $('filtro').addEventListener('change', renderReport);
@@ -343,8 +409,8 @@
   });
 
   /* ---------- Inicio de la app ---------- */
-  fillTimeSelects();
+  buildWheel('w-h', 24);
+  buildWheel('w-m', 60);
   resetForm();
   go('inicio');
 })();
-                          
