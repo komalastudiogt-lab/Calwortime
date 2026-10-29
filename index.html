@@ -12,10 +12,30 @@
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M5 20v-8M12 20V5M19 20v-12"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13 7l4 4"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+<symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+<symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></symbol>
+<symbol id="i-share" viewBox="0 0 24 24"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6"/></symbol>
+<symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 11l5 5 5-5M5 20h14"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></symbol>
+</defs></svg>
+
 <header>
-  <button class="hb" id="btn-menu" aria-label="Respaldos">☰</button>
+  <button class="hb" id="btn-menu" aria-label="Respaldos"><svg class="ic"><use href="#i-menu"/></svg></button>
   <h1>Calwortime</h1>
-  <button class="hb" id="btn-perfil" aria-label="Perfil">👤</button>
+  <button class="hb" id="btn-perfil" aria-label="Perfil"><svg class="ic"><use href="#i-user"/></svg></button>
 </header>
 
 <main id="main">
@@ -26,8 +46,8 @@
       <p id="tot-h">0.00 hrs acumuladas</p>
       <h2 id="tot-m">Q 0.00</h2>
       <div class="qa">
-        <button class="btn" data-go="registro">Nuevo turno</button>
-        <button class="btn ghost" data-go="informes">Reportes</button>
+        <button class="btn" data-go="registro"><svg class="ic"><use href="#i-plus"/></svg>Nuevo turno</button>
+        <button class="btn ghost" data-go="informes"><svg class="ic"><use href="#i-chart"/></svg>Reportes</button>
       </div>
     </div>
     <div class="sheet">
@@ -40,11 +60,11 @@
   <section id="v-registro" class="screen">
     <div class="sheet">
       <h3 id="form-titulo">Registrar jornada</h3>
-      <button type="button" class="btn ghost full" id="btn-ahora">Rellenar con hora actual</button>
+      <button type="button" class="btn ghost full" id="btn-ahora"><svg class="ic"><use href="#i-bolt"/></svg>Rellenar con hora actual</button>
       <form id="f-jor" autocomplete="off">
-        <label>Fecha de entrada<input type="date" id="j-fecha" required></label>
-        <label>Hora de entrada<input type="text" id="j-ini" placeholder="00:00" readonly required></label>
-        <label>Hora de salida<input type="text" id="j-fin" placeholder="00:00" readonly required></label>
+        <label>Fecha de entrada<div class="fi"><input type="text" id="j-fecha" placeholder="AAAA-MM-DD" readonly required><svg class="ic"><use href="#i-cal"/></svg></div></label>
+        <label>Hora de entrada<div class="fi"><input type="text" id="j-ini" placeholder="00:00" readonly required><svg class="ic"><use href="#i-clock"/></svg></div></label>
+        <label>Hora de salida<div class="fi"><input type="text" id="j-fin" placeholder="00:00" readonly required><svg class="ic"><use href="#i-clock"/></svg></div></label>
         <label>Pausa no remunerada (minutos)<input type="number" id="j-pausa" value="0" min="0" inputmode="numeric"></label>
         <label>Recargo festivo
           <select id="j-fest">
@@ -80,7 +100,7 @@
         <div id="rep-por"></div>
         <div id="rep-pag"></div>
       </div>
-      <button class="btn full" id="btn-pdf">Compartir PDF</button>
+      <button class="btn full" id="btn-pdf"><svg class="ic"><use href="#i-share"/></svg>Compartir PDF</button>
     </div>
   </section>
 
@@ -100,34 +120,47 @@
 </main>
 
 <nav class="nav">
-  <button data-v="inicio" class="active"><span>🏠</span>Inicio</button>
-  <button data-v="registro"><span>➕</span>Registro</button>
-  <button data-v="informes"><span>📊</span>Informes</button>
-  <button data-v="perfil"><span>👤</span>Perfil</button>
+  <button data-v="inicio" class="active"><svg class="ic"><use href="#i-home"/></svg>Inicio</button>
+  <button data-v="registro"><svg class="ic"><use href="#i-plus"/></svg>Registro</button>
+  <button data-v="informes"><svg class="ic"><use href="#i-chart"/></svg>Informes</button>
+  <button data-v="perfil"><svg class="ic"><use href="#i-user"/></svg>Perfil</button>
 </nav>
+
+<div id="m-fecha" class="modal">
+  <div class="box cal">
+    <div class="cal-head">
+      <button type="button" class="hb" id="c-prev" aria-label="Mes anterior"><svg class="ic"><use href="#i-left"/></svg></button>
+      <b id="c-titulo"></b>
+      <button type="button" class="hb" id="c-next" aria-label="Mes siguiente"><svg class="ic"><use href="#i-right"/></svg></button>
+    </div>
+    <div class="dow"><span>D</span><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span></div>
+    <div class="grid" id="c-grid"></div>
+    <div class="qa"><button type="button" class="btn ghost" id="c-hoy">Hoy</button><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn" id="c-ok">Aceptar</button></div>
+  </div>
+</div>
 
 <div id="m-hora" class="modal">
   <div class="box">
     <h3>Selecciona la hora</h3>
-    <div class="time"><select id="t-h"></select><b>:</b><select id="t-m"></select></div>
-    <div class="qa"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="t-ok">Aceptar</button></div>
+    <div class="wheel"><div class="band"></div><div class="col" id="w-h"></div><b>:</b><div class="col" id="w-m"></div></div>
+    <div class="qa"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn" id="t-ok">Aceptar</button></div>
   </div>
 </div>
 
 <div id="m-borrar" class="modal">
   <div class="box">
     <h3 id="b-msg">¿Eliminar?</h3>
-    <div class="qa"><button class="btn ghost" data-close>Cancelar</button><button class="btn danger" id="b-ok">Eliminar</button></div>
+    <div class="qa"><button type="button" class="btn ghost" data-close>Cancelar</button><button type="button" class="btn danger" id="b-ok">Eliminar</button></div>
   </div>
 </div>
 
 <div id="m-menu" class="modal">
   <div class="box">
     <h3>Respaldos</h3>
-    <button class="btn full" id="btn-export">Exportar respaldo (JSON)</button>
-    <button class="btn ghost full" id="btn-import">Importar respaldo</button>
+    <button type="button" class="btn full" id="btn-export"><svg class="ic"><use href="#i-down"/></svg>Exportar respaldo (JSON)</button>
+    <button type="button" class="btn ghost full" id="btn-import"><svg class="ic"><use href="#i-up"/></svg>Importar respaldo</button>
     <input type="file" id="file-import" accept=".json,application/json" hidden>
-    <button class="btn ghost full" data-close>Cerrar</button>
+    <button type="button" class="btn ghost full" data-close>Cerrar</button>
   </div>
 </div>
 
