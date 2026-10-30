@@ -1,6 +1,14 @@
 (function () {
   'use strict';
 
+  // Aviso visible si ocurre un error de JavaScript (ayuda a diagnosticar en el teléfono)
+  window.addEventListener('error', function (e) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#ff5d5d;color:#1a0505;padding:10px;border-radius:10px;font-size:12px;font-weight:700';
+    d.textContent = 'Error: ' + e.message + ' (línea ' + (e.lineno || '?') + ')';
+    document.body.appendChild(d);
+  });
+
 
 
   var $ = function (id) { return document.getElementById(id); };
@@ -31,17 +39,24 @@
     var d = new Date();
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   }
-  function fd(iso, o) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString('es', o); }
-  function nextDay(iso) {
-    var p = iso.split('-'), d = new Date(+p[0], +p[1] - 1, +p[2] + 1);
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  // Día(s) del turno, sin usar funciones de fecha del sistema.
+  // Si la salida es menor o igual a la entrada, el turno cruza la medianoche.
+  var MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  var DIA3 = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+  function diasMes(y, m) {
+    var bis = (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 29 : 28;
+    return [31, bis, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
   }
-  // Día(s) del turno: si la salida es menor o igual a la entrada, el turno cruza la medianoche
   function rango(s) {
-    if (s.end > s.start) return fd(s.date, { weekday: 'short', day: 'numeric', month: 'short' });
-    var e = nextDay(s.date), a = s.date.split('-'), b = e.split('-');
-    if (a[1] === b[1]) return 'Del ' + (+a[2]) + ' al ' + (+b[2]) + ' ' + fd(e, { month: 'short' });
-    return 'Del ' + fd(s.date, { day: 'numeric', month: 'short' }) + ' al ' + fd(e, { day: 'numeric', month: 'short' });
+    try {
+      var p = String(s.date).split('-'), y = +p[0], m = +p[1], d = +p[2];
+      if (!(m >= 1 && m <= 12 && d >= 1 && d <= 31)) return String(s.date);
+      if (s.end > s.start) return DIA3[new Date(y, m - 1, d).getDay()] + ', ' + d + ' ' + MES3[m - 1];
+      var d2 = d + 1, m2 = m;
+      if (d2 > diasMes(y, m)) { d2 = 1; m2 = m === 12 ? 1 : m + 1; }
+      if (m2 === m) return 'Del ' + d + ' al ' + d2 + ' ' + MES3[m - 1];
+      return 'Del ' + d + ' ' + MES3[m - 1] + ' al ' + d2 + ' ' + MES3[m2 - 1];
+    } catch (e) { return String(s.date); }
   }
   function money(n) { return P.moneda + ' ' + n.toFixed(2); }
   function toast(m) {
@@ -432,20 +447,4 @@
     return list[0][1];
   }
   function setFest(v) { $('j-fest').value = v; $('j-fest-t').value = lbl(FEST, v); }
-  function setFilt(v) { $('filtro').value = v; $('filtro-t').textContent = lbl(FILT, v); }
-  function pick(title, opts, cur, cb) {
-    $('pk-t').textContent = title;
-    $('pk-l').innerHTML = opts.map(function (o) {
-      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" data-v="' + o[0] + '"><span>' + o[1] + '</span>' + ic('tick') + '</button>';
-    }).join('');
-    pickCb = cb;
-    openM('m-pick');
-  }
-  $('pk-l').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-v]');
-    if (!b) return;
-    var f = pickCb; pickCb = null; closeM();
-    if (f) f(b.dataset.v);
-  });
-  $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
-  $('filtro-b').addEventListener('click', 
+  function setFilt(v) { $('filtro').value = v; $('filtro-t').
