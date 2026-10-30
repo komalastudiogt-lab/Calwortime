@@ -1,13 +1,6 @@
 (function () {
   'use strict';
 
-  // Aviso visible si ocurre un error de JavaScript (ayuda a diagnosticar en el teléfono)
-  window.addEventListener('error', function (e) {
-    var d = document.createElement('div');
-    d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#ff5d5d;color:#1a0505;padding:10px;border-radius:10px;font-size:12px;font-weight:700';
-    d.textContent = 'Error: ' + e.message + ' (línea ' + (e.lineno || '?') + ')';
-    document.body.appendChild(d);
-  });
 
 
 
@@ -38,25 +31,6 @@
   function today() {
     var d = new Date();
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-  }
-  // Día(s) del turno, sin usar funciones de fecha del sistema.
-  // Si la salida es menor o igual a la entrada, el turno cruza la medianoche.
-  var MES3 = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-  var DIA3 = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-  function diasMes(y, m) {
-    var bis = (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 29 : 28;
-    return [31, bis, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
-  }
-  function rango(s) {
-    try {
-      var p = String(s.date).split('-'), y = +p[0], m = +p[1], d = +p[2];
-      if (!(m >= 1 && m <= 12 && d >= 1 && d <= 31)) return String(s.date);
-      if (s.end > s.start) return DIA3[new Date(y, m - 1, d).getDay()] + ', ' + d + ' ' + MES3[m - 1];
-      var d2 = d + 1, m2 = m;
-      if (d2 > diasMes(y, m)) { d2 = 1; m2 = m === 12 ? 1 : m + 1; }
-      if (m2 === m) return 'Del ' + d + ' al ' + d2 + ' ' + MES3[m - 1];
-      return 'Del ' + d + ' ' + MES3[m - 1] + ' al ' + d2 + ' ' + MES3[m2 - 1];
-    } catch (e) { return String(s.date); }
   }
   function money(n) { return P.moneda + ' ' + n.toFixed(2); }
   function toast(m) {
@@ -92,7 +66,7 @@
     return '<div class="row"><div class="acts">' +
       '<button data-a="edit" data-id="' + s.id + '">' + ic('edit') + '</button>' +
       '<button data-a="del" data-id="' + s.id + '" class="d">' + ic('trash') + '</button></div>' +
-      '<div class="item"><div><b>' + rango(s) + '</b><small>' + s.start + ' - ' + s.end +
+      '<div class="item"><div><b>' + s.date + '</b><small>' + s.start + ' - ' + s.end +
       (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
       '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
       '<button data-a="pay" data-id="' + s.id + '" class="bd ' + (s.paid ? 'ok' : '') + '">' +
@@ -145,8 +119,8 @@
     if (!arr.length) return html + '<p class="empty">Sin registros</p>';
     return html + arr.map(function (s) {
       var c = calc(s);
-      return '<div class="rr"><span><b>' + rango(s) + '</b><br><small>' + s.start + ' - ' + s.end +
-        (s.notes ? ' · ' + esc(s.notes) : '') + '</small></span>' +
+      return '<div class="rr"><span>' + s.date + ' ' + s.start + '-' + s.end +
+        (s.notes ? '<br><small>' + esc(s.notes) + '</small>' : '') + '</span>' +
         '<span>' + c.h.toFixed(2) + ' h<br><b class="lime">' + money(c.pay) + '</b></span>' +
         '<button class="x" data-a="del" data-id="' + s.id + '" aria-label="Eliminar">' + ic('x') + '</button></div>';
     }).join('');
@@ -447,4 +421,30 @@
     return list[0][1];
   }
   function setFest(v) { $('j-fest').value = v; $('j-fest-t').value = lbl(FEST, v); }
-  function setFilt(v) { $('filtro').value = v; $('filtro-t').
+  function setFilt(v) { $('filtro').value = v; $('filtro-t').textContent = lbl(FILT, v); }
+  function pick(title, opts, cur, cb) {
+    $('pk-t').textContent = title;
+    $('pk-l').innerHTML = opts.map(function (o) {
+      return '<button type="button" class="opt' + (o[0] === cur ? ' sel' : '') + '" data-v="' + o[0] + '"><span>' + o[1] + '</span>' + ic('tick') + '</button>';
+    }).join('');
+    pickCb = cb;
+    openM('m-pick');
+  }
+  $('pk-l').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-v]');
+    if (!b) return;
+    var f = pickCb; pickCb = null; closeM();
+    if (f) f(b.dataset.v);
+  });
+  $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
+  $('filtro-b').addEventListener('click', function () {
+    pick('Periodo', FILT, $('filtro').value, function (v) { setFilt(v); renderReport(); });
+  });
+
+  /* ---------- Inicio de la app ---------- */
+  buildWheel('w-h', 24);
+  buildWheel('w-m', 60);
+  resetForm();
+  go('inicio');
+})();
+      
