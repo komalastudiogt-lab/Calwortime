@@ -4,6 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Calwortime</title>
+<script>
+// Detector de errores: avisa si app.js tiene un error o no llegó completo
+(function () {
+  function aviso(t) {
+    var d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:8px;right:8px;top:8px;z-index:99;background:#ff5d5d;color:#1a0505;padding:10px;border-radius:10px;font:700 12px sans-serif';
+    d.textContent = t;
+    (document.body || document.documentElement).appendChild(d);
+  }
+  window.addEventListener('error', function (e) {
+    aviso('Error: ' + e.message + ' (' + String(e.filename || '').split('/').pop() + ':' + (e.lineno || '?') + ')');
+  });
+  window.addEventListener('load', function () {
+    setTimeout(function () { if (!window.__calwortimeListo) aviso('app.js no arrancó: el archivo puede estar dañado o incompleto'); }, 1000);
+  });
+})();
+</script>
 <link rel="stylesheet" href="./css/styles.css">
 <script src="./js/chart.js" defer></script>
 <script src="./js/html2pdf.js" defer></script>
