@@ -2,6 +2,7 @@
   'use strict';
 
 
+
   var $ = function (id) { return document.getElementById(id); };
   var K = { p: 'calwortime_perfil', s: 'calwortime_turnos' };
 
@@ -447,4 +448,4 @@
     if (f) f(b.dataset.v);
   });
   $('j-fest-t').addEventListener('click', function () { pick('Recargo festivo', FEST, $('j-fest').value, setFest); });
-  $('filtro-b').addEventListener('click', f
+  $('filtro-b').addEventListener('click', 
