@@ -92,9 +92,11 @@
       (s.paid ? 'Pagado' : 'Por cobrar') + '</button></div></div></div>';
   }
   /* ---------- Detalles visuales ---------- */
+  var retraso = 0;
   var reducir = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function animar(el, hasta, fmt) {
     if (el._raf) cancelAnimationFrame(el._raf);
+    if (el._to) clearTimeout(el._to);
     var desde = el._cur === undefined ? 0 : el._cur;
     if (reducir || desde === hasta) { el._cur = hasta; el.textContent = fmt(hasta); return; }
     var t0 = null;
@@ -106,7 +108,9 @@
       if (k < 1) { el._raf = requestAnimationFrame(paso); }
       else { el._raf = 0; el._cur = hasta; el.textContent = fmt(hasta); }
     }
-    el._raf = requestAnimationFrame(paso);
+    el.textContent = fmt(desde);
+    if (retraso) { el._to = setTimeout(function () { el._to = 0; el._raf = requestAnimationFrame(paso); }, retraso); }
+    else { el._raf = requestAnimationFrame(paso); }
   }
   function renderSpark() {
     var by = {}, vals = [], i, hoy = new Date();
@@ -579,6 +583,8 @@
   buildWheel('w-h', 24);
   buildWheel('w-m', 60);
   resetForm();
+  retraso = 1500;
   go('inicio');
+  retraso = 0;
   window.__calwortimeListo = true;
 })();
