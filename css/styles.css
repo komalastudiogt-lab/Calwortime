@@ -174,3 +174,15 @@ label{font-weight:500;letter-spacing:.01em}
 #btn-timer{white-space:nowrap}
 #btn-timer.stop{background:var(--red);color:#1a0505}
 .link{background:none;border:0;color:var(--muted);text-decoration:underline;padding:6px 0 0;font-size:.8rem;cursor:pointer}
+
+/* Detalles visuales */
+.hero{position:relative}
+.spark{position:absolute;top:16px;right:18px;width:110px;height:40px;overflow:visible}
+.item{border-left:3px solid var(--cobalt)}
+.item.ok{border-left-color:var(--lime)}
+.bd{background:rgba(21,88,201,.28)}
+.wk{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:18px 2px 2px;font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500}
+.wk b{font-weight:700;text-transform:none;letter-spacing:0}
+#lista .wk:first-child{margin-top:8px}
+.qa .btn{white-space:nowrap;padding:12px 8px}
+.bd{white-space:nowrap}
