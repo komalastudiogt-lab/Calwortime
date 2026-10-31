@@ -50,6 +50,7 @@ jobs:
           cp index.html www/
           cp -r css www/
           cp js/app.js www/js/
+          [ -f icon.png ] && cp icon.png www/icon.png || true
 
           npm init -y
           npm install @capacitor/core@7 @capacitor/cli@7 @capacitor/android@7 @capacitor/filesystem@7 @capacitor/share@7 @capacitor/assets chart.js@4.4.7 html2pdf.js@0.10.1 @fontsource/space-grotesk@5 esbuild
