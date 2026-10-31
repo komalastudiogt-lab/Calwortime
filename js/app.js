@@ -181,7 +181,7 @@
     document.querySelectorAll('.screen').forEach(function (e) { e.classList.toggle('active', e.id === 'v-' + v); });
     document.querySelectorAll('.nav button').forEach(function (b) { b.classList.toggle('active', b.dataset.v === v); });
     $('main').scrollTop = 0;
-    if (v === 'inicio') renderHome();
+    if (v === 'inicio') { renderHome(); renderTimer(); }
     if (v === 'informes') renderReport();
     if (v === 'perfil') fillProfile();
     if (v === 'registro' && !editId && !$('j-fecha').value) $('j-fecha').value = today();
@@ -194,7 +194,7 @@
   /* ---------- Modales ---------- */
   function openM(id) { $(id).classList.add('open'); }
   function closeM() { document.querySelectorAll('.modal').forEach(function (m) { m.classList.remove('open'); }); }
-  function ask(msg, fn) { $('b-msg').textContent = msg; onYes = fn; openM('m-borrar'); }
+  function ask(msg, fn, ok) { $('b-msg').textContent = msg; $('b-ok').textContent = ok || 'Eliminar'; onYes = fn; openM('m-borrar'); }
 
   /* ---------- Ruedas de hora y calendario propios ---------- */
   var MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -265,6 +265,7 @@
     $('j-ini').value = pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
   function startEdit(id) {
+    fromTimer = false;
     var s = S.find(function (x) { return x.id === id; });
     if (!s) return;
     editId = id;
@@ -393,7 +394,7 @@
   });
   $('c-ok').addEventListener('click', function () { $('j-fecha').value = cal.sel; closeM(); });
   $('b-ok').addEventListener('click', function () { var f = onYes; onYes = null; closeM(); if (f) f(); });
-  $('btn-cancelar').addEventListener('click', function () { resetForm(); go('inicio'); });
+  $('btn-cancelar').addEventListener('click', function () { fromTimer = false; resetForm(); go('inicio'); });
   $('btn-pdf').addEventListener('click', pdf);
   $('btn-export').addEventListener('click', exportar);
   $('btn-import').addEventListener('click', function () { $('file-import').click(); });
@@ -414,6 +415,7 @@
       S = S.map(function (x) { return x.id === editId ? s : x; });
     } else S.push(s);
     save(K.s, S);
+    if (fromTimer) { fromTimer = false; limpiarActivo(); }
     resetForm();
     toast(P.tarifa > 0 ? 'Jornada guardada' : 'Guardada. Configura tu tarifa en Perfil');
     go('inicio');
@@ -458,6 +460,54 @@
   $('filtro-b').addEventListener('click', function () {
     pick('Periodo', FILT, $('filtro').value, function (v) { setFilt(v); renderReport(); });
   });
+
+  /* ---------- Turno en curso: iniciar y terminar ---------- */
+  var KA = 'calwortime_activo';
+  var activo = load(KA, null);
+  if (!activo || !activo.date || !activo.start || !activo.ts) activo = null;
+  var fromTimer = false;
+  function limpiarActivo() {
+    activo = null;
+    try { localStorage.removeItem(KA); } catch (e) {}
+    renderTimer();
+  }
+  function hhmm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function renderTimer() {
+    var on = !!activo;
+    $('timer').classList.toggle('on', on);
+    $('btn-timer').classList.toggle('stop', on);
+    $('btn-timer-t').textContent = on ? 'Terminar turno' : 'Iniciar turno';
+    $('btn-timer-i').setAttribute('href', on ? '#i-stop' : '#i-play');
+    $('btn-descartar').hidden = !on;
+    if (!on) { $('t-estado').textContent = 'Sin turno en curso'; $('t-reloj').textContent = '00:00'; return; }
+    var min = Math.max(0, Math.floor((Date.now() - activo.ts) / 6e4));
+    $('t-estado').textContent = 'En curso desde ' + activo.start;
+    $('t-reloj').textContent = pad(Math.floor(min / 60)) + ':' + pad(min % 60) + ' h';
+  }
+  function toggleTimer() {
+    var ahora = new Date();
+    if (!activo) {
+      activo = { date: today(), start: hhmm(ahora), ts: ahora.getTime() };
+      save(KA, activo);
+      renderTimer();
+      toast('Turno iniciado a las ' + activo.start);
+      return;
+    }
+    var horas = (ahora.getTime() - activo.ts) / 36e5;
+    fromTimer = true; editId = null;
+    $('j-fecha').value = activo.date; $('j-ini').value = activo.start; $('j-fin').value = hhmm(ahora);
+    $('j-pausa').value = 0; setFest('none'); $('j-notas').value = '';
+    $('form-titulo').textContent = 'Terminar turno';
+    $('btn-cancelar').hidden = false;
+    go('registro');
+    toast(horas >= 24 ? 'Pasaron más de 24 h: revisa la hora de salida' : 'Completa los datos y guarda');
+  }
+  $('btn-timer').addEventListener('click', toggleTimer);
+  $('btn-descartar').addEventListener('click', function () {
+    ask('¿Descartar el turno en curso?', function () { limpiarActivo(); toast('Turno descartado'); }, 'Descartar');
+  });
+  setInterval(function () { if (activo && $('v-inicio').classList.contains('active')) renderTimer(); }, 20000);
+  document.addEventListener('visibilitychange', function () { if (activo) renderTimer(); });
 
   /* ---------- Inicio de la app ---------- */
   buildWheel('w-h', 24);
