@@ -186,3 +186,14 @@ label{font-weight:500;letter-spacing:.01em}
 #lista .wk:first-child{margin-top:8px}
 .qa .btn{white-space:nowrap;padding:12px 8px}
 .bd{white-space:nowrap}
+
+/* Pantalla de arranque (solo CSS: se oculta sola y nunca bloquea los toques) */
+#splash{position:fixed;inset:0;z-index:98;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;background:var(--bg);opacity:0;visibility:hidden;pointer-events:none;animation:sp-vida 1.9s ease forwards}
+#splash img{width:116px;height:116px;border-radius:27px;box-shadow:0 0 0 1px rgba(21,88,201,.45),0 14px 52px rgba(21,88,201,.5);animation:sp-icono 1.9s cubic-bezier(.2,.8,.2,1) forwards}
+.sp-bar{width:96px;height:3px;border-radius:2px;background:rgba(255,255,255,.12);overflow:hidden}
+.sp-bar i{display:block;height:100%;background:var(--lime);transform:translateX(-100%);animation:sp-barra 1.05s ease .35s forwards}
+#splash p{font-size:1.1rem;font-weight:700;letter-spacing:.16em;text-transform:uppercase;animation:sp-texto 1.9s ease forwards}
+@keyframes sp-vida{0%,76%{opacity:1;visibility:visible}100%{opacity:0;visibility:hidden}}
+@keyframes sp-icono{0%{transform:scale(.55);opacity:0;filter:blur(8px)}26%{transform:scale(1.07);opacity:1;filter:blur(0)}36%,72%{transform:scale(1);opacity:1;filter:blur(0)}100%{transform:scale(1.55);opacity:0;filter:blur(10px)}}
+@keyframes sp-barra{to{transform:translateX(0)}}
+@keyframes sp-texto{0%,14%{opacity:0;transform:translateY(8px)}34%,72%{opacity:1;transform:none}100%{opacity:0}}
