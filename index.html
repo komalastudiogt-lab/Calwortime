@@ -49,6 +49,8 @@
 <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 16V5M7 9l5-5 5 5M5 20h14"/></symbol>
 <symbol id="i-chev" viewBox="0 0 24 24"><path d="M5 9l7 7 7-7"/></symbol>
 <symbol id="i-tick" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
+<symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
 </defs></svg>
 
 <header>
@@ -69,6 +71,14 @@
         <button class="btn ghost" data-go="informes"><svg class="ic"><use href="#i-chart"/></svg>Reportes</button>
       </div>
     </div></div>
+    <div class="sheet timer" id="timer">
+      <div>
+        <small id="t-estado">Sin turno en curso</small>
+        <b id="t-reloj">00:00</b>
+        <button type="button" class="link" id="btn-descartar" hidden>Descartar turno</button>
+      </div>
+      <button type="button" class="btn" id="btn-timer"><svg class="ic"><use id="btn-timer-i" href="#i-play"/></svg><span id="btn-timer-t">Iniciar turno</span></button>
+    </div>
     <div class="sheet">
       <h3>Historial de jornadas</h3>
       <small class="muted">Desliza un turno a la izquierda para editar o eliminar</small>
