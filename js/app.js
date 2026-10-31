@@ -62,6 +62,7 @@
     var a = new Date(s.date + 'T' + s.start);
     var b = new Date(s.date + 'T' + s.end);
     if (b <= a) b = new Date(b.getTime() + 864e5);
+    if (isNaN(a.getTime()) || isNaN(b.getTime())) return { h: 0, fh: 0, pay: 0 };
     var total = (b - a) / 6e4;
     var mid = new Date(a); mid.setHours(24, 0, 0, 0);
     var f = 0;
@@ -84,20 +85,85 @@
     return '<div class="row"><div class="acts">' +
       '<button data-a="edit" data-id="' + s.id + '">' + ic('edit') + '</button>' +
       '<button data-a="del" data-id="' + s.id + '" class="d">' + ic('trash') + '</button></div>' +
-      '<div class="item"><div><b>' + s.date + '</b><small>' + (r ? r + ' · ' : '') + s.start + ' - ' + s.end +
+      '<div class="item' + (s.paid ? ' ok' : '') + '"><div><b>' + s.date + '</b><small>' + (r ? r + ' · ' : '') + s.start + ' - ' + s.end +
       (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
       '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
       '<button data-a="pay" data-id="' + s.id + '" class="bd ' + (s.paid ? 'ok' : '') + '">' +
       (s.paid ? 'Pagado' : 'Por cobrar') + '</button></div></div></div>';
   }
+  /* ---------- Detalles visuales ---------- */
+  var reducir = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function animar(el, hasta, fmt) {
+    if (el._raf) cancelAnimationFrame(el._raf);
+    var desde = el._cur === undefined ? 0 : el._cur;
+    if (reducir || desde === hasta) { el._cur = hasta; el.textContent = fmt(hasta); return; }
+    var t0 = null;
+    function paso(t) {
+      if (t0 === null) t0 = t;
+      var k = Math.min(1, (t - t0) / 600), e = 1 - Math.pow(1 - k, 3);
+      el._cur = desde + (hasta - desde) * e;
+      el.textContent = fmt(el._cur);
+      if (k < 1) { el._raf = requestAnimationFrame(paso); }
+      else { el._raf = 0; el._cur = hasta; el.textContent = fmt(hasta); }
+    }
+    el._raf = requestAnimationFrame(paso);
+  }
+  function renderSpark() {
+    var by = {}, vals = [], i, hoy = new Date();
+    S.forEach(function (s) { by[s.date] = (by[s.date] || 0) + calc(s).pay; });
+    for (i = 6; i >= 0; i--) {
+      var d = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() - i);
+      vals.push(by[d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())] || 0);
+    }
+    var mx = Math.max.apply(null, vals) || 1, pts = [];
+    vals.forEach(function (v, j) { pts.push((j * 110 / 6).toFixed(1) + ',' + (37 - (v / mx) * 32).toFixed(1)); });
+    var last = pts[6].split(',');
+    $('spark').innerHTML =
+      '<polygon points="0,40 ' + pts.join(' ') + ' 110,40" fill="rgba(212,255,36,.14)"/>' +
+      '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#D4FF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3" fill="#D4FF24"/>';
+  }
+  function lunes(iso) {
+    var p = String(iso).split('-'), f = new Date(+p[0], +p[1] - 1, +p[2]);
+    if (isNaN(f.getTime())) return null;
+    f.setDate(f.getDate() - ((f.getDay() + 6) % 7));
+    return f;
+  }
+  function listaSemanas(arr) {
+    var hoy = new Date(), lh = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    lh.setDate(lh.getDate() - ((lh.getDay() + 6) % 7));
+    var claves = arr.map(function (s) { var l = lunes(s.date); return l ? l.getTime() : 0; });
+    var tot = {};
+    arr.forEach(function (s, i) {
+      var c = calc(s), t = tot[claves[i]] || (tot[claves[i]] = { h: 0, m: 0 });
+      t.h += c.h; t.m += c.pay;
+    });
+    var out = '', prev = null;
+    arr.forEach(function (s, i) {
+      var k = claves[i];
+      if (k !== prev) {
+        prev = k;
+        var et = 'Otras fechas';
+        if (k) {
+          var sem = Math.round((lh.getTime() - k) / 6048e5), f = new Date(k);
+          et = sem === 0 ? 'Esta semana' : sem === 1 ? 'Semana pasada' : 'Semana del ' + f.getDate() + ' ' + MES3[f.getMonth()];
+        }
+        out += '<div class="wk"><span>' + et + '</span><span>' + tot[k].h.toFixed(2) + ' h · <b class="lime">' + money(tot[k].m) + '</b></span></div>';
+      }
+      out += row(s);
+    });
+    return out;
+  }
+
   function renderHome() {
     var h = 0, m = 0;
     S.forEach(function (s) { var c = calc(s); h += c.h; m += c.pay; });
-    $('tot-h').textContent = h.toFixed(2) + ' hrs acumuladas';
-    $('tot-m').textContent = money(m);
+    animar($('tot-h'), h, function (v) { return v.toFixed(2) + ' hrs acumuladas'; });
+    animar($('tot-m'), m, money);
+    renderSpark();
     $('fecha').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
-    var l = sorted().slice(0, 15);
-    $('lista').innerHTML = l.length ? l.map(row).join('') : '<p class="empty">No hay jornadas registradas. Toca "Nuevo turno" para empezar.</p>';
+    var l = sorted();
+    $('lista').innerHTML = l.length ? listaSemanas(l) : '<p class="empty">No hay jornadas registradas. Toca "Nuevo turno" para empezar.</p>';
     open = null;
   }
 
