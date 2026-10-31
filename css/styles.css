@@ -163,3 +163,14 @@ label{font-weight:500;letter-spacing:.01em}
 .hero-wrap .hero{margin:0;padding:16px 18px}
 .hero p{margin-top:8px}
 .hero h2{margin:0 0 12px}
+
+/* Turno en curso */
+.timer{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.timer b{display:block;font-size:1.9rem;line-height:1.1;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:2px}
+.timer.on{border-color:var(--lime)}
+.timer.on b{color:var(--lime)}
+.timer.on small::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--lime);margin-right:6px;animation:latido 1.6s ease-in-out infinite}
+@keyframes latido{50%{opacity:.25}}
+#btn-timer{white-space:nowrap}
+#btn-timer.stop{background:var(--red);color:#1a0505}
+.link{background:none;border:0;color:var(--muted);text-decoration:underline;padding:6px 0 0;font-size:.8rem;cursor:pointer}
