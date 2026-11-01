@@ -161,6 +161,25 @@
     return out;
   }
 
+  var VACIO = '<div class="vacio"><svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true">' +
+    '<circle cx="60" cy="60" r="46" fill="rgba(21,88,201,.10)" stroke="#1558C9" stroke-width="2.5"/>' +
+    '<circle cx="60" cy="60" r="38" fill="none" stroke="rgba(21,88,201,.4)" stroke-width="1" stroke-dasharray="2 5"/>' +
+    '<path d="M60 20v7M60 93v7M20 60h7M93 60h7" stroke="#1558C9" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M60 60L75 69" stroke="#e8edf7" stroke-width="4" stroke-linecap="round"/>' +
+    '<path class="mano" d="M60 60V34" stroke="#D4FF24" stroke-width="3.5" stroke-linecap="round"/>' +
+    '<circle cx="60" cy="60" r="4" fill="#D4FF24"/></svg>' +
+    '<p>Aún no tienes turnos</p><small>Toca "Nuevo turno" o "Iniciar turno" para empezar</small></div>';
+  // Pista de deslizar: la primera vez que hay turnos, la primera fila se mueve un poco y vuelve
+  function pistaDeslizar() {
+    var it = document.querySelector('#lista .item');
+    if (!it || reducir || load('calwortime_pista', false)) return;
+    save('calwortime_pista', true);
+    setTimeout(function () {
+      if (!it.isConnected || it.dataset.o === '1' || pantalla !== 'inicio') return;
+      it.style.transform = 'translateX(-70px)';
+      setTimeout(function () { if (it.dataset.o !== '1') it.style.transform = ''; }, 700);
+    }, 2300);
+  }
   function renderHome() {
     var h = 0, m = 0;
     S.forEach(function (s) { var c = calc(s); h += c.h; m += c.pay; });
@@ -169,7 +188,8 @@
     renderSpark();
     $('fecha').textContent = new Date().toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
     var l = sorted();
-    $('lista').innerHTML = l.length ? listaSemanas(l) : '<p class="empty">No hay jornadas registradas. Toca "Nuevo turno" para empezar.</p>';
+    $('lista').innerHTML = l.length ? listaSemanas(l) : VACIO;
+    pistaDeslizar();
     open = null;
   }
 
@@ -233,13 +253,32 @@
     chart = new Chart($('grafica'), {
       type: 'bar',
       data: {
-        labels: k.map(function (d) { return d.slice(5); }),
-        datasets: [{ data: k.map(function (d) { return +by[d].toFixed(2); }),
-          backgroundColor: '#1558C9', borderColor: '#D4FF24', borderWidth: 1, borderRadius: 6 }]
+        labels: k.map(function (d) { return d.slice(8) + ' ' + (MES3[+d.slice(5, 7) - 1] || ''); }),
+        datasets: [{
+          data: k.map(function (d) { return +by[d].toFixed(2); }),
+          backgroundColor: function (c) {
+            var a = c.chart.chartArea;
+            if (!a) return '#1558C9';
+            var g = c.chart.ctx.createLinearGradient(0, a.bottom, 0, a.top);
+            g.addColorStop(0, '#1558C9'); g.addColorStop(1, '#D4FF24');
+            return g;
+          },
+          borderWidth: 0, borderRadius: 8, borderSkipped: false, maxBarThickness: 38
+        }]
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
+        animation: { duration: 800, easing: 'easeOutQuart' },
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#121826', borderColor: '#D4FF24', borderWidth: 1, displayColors: false,
+            titleColor: '#7f8aa3', bodyColor: '#D4FF24', bodyFont: { weight: 'bold', size: 14 },
+            padding: 10, cornerRadius: 10,
+            callbacks: { label: function (c) { return money(c.parsed.y); } }
+          }
+        },
         scales: {
           x: { ticks: { color: '#7f8aa3' }, grid: { display: false } },
           y: { ticks: { color: '#7f8aa3' }, grid: { color: 'rgba(21,88,201,.15)' } }
@@ -259,6 +298,7 @@
     if (dir !== 0) $('v-' + v).classList.add(dir > 0 ? 'dir-der' : 'dir-izq');
     document.querySelectorAll('.nav button').forEach(function (b) { b.classList.toggle('active', b.dataset.v === v); });
     $('main').scrollTop = 0;
+    $('nav').style.setProperty('--i', Math.max(0, ORDEN.indexOf(v)));
     if (v === 'inicio') { renderHome(); renderTimer(); }
     if (v === 'informes') renderReport();
     if (v === 'perfil') fillProfile();
