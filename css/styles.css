@@ -239,3 +239,20 @@ main{overflow-x:hidden}
 .sw input:checked + i{background:var(--cobalt)}
 .sw input:checked + i::after{transform:translateX(20px);background:var(--lime)}
 #btn-probar-vib{margin-top:12px}
+
+/* Bloqueo con PIN */
+.bloqueo{position:fixed;inset:0;z-index:45;display:flex;align-items:center;justify-content:center;padding:20px;background:radial-gradient(70% 45% at 50% 0,rgba(21,88,201,.28),transparent 70%),var(--bg)}
+.bq-in{width:100%;max-width:320px;text-align:center}
+.bq-in img{width:64px;height:64px;border-radius:16px;box-shadow:0 8px 30px rgba(21,88,201,.5)}
+.bq-t{margin-top:16px;font-weight:700;font-size:1.15rem}
+.bq-pts{display:flex;justify-content:center;gap:16px;margin:22px 0 8px}
+.bq-pts i{width:16px;height:16px;border-radius:50%;border:2px solid var(--cobalt);transition:background .15s,transform .15s}
+.bq-pts i.on{background:var(--lime);border-color:var(--lime);transform:scale(1.15)}
+.bq-pts.err{animation:sacudir .4s}
+@keyframes sacudir{20%,60%{transform:translateX(-10px)}40%,80%{transform:translateX(10px)}}
+#bq-msg{display:block;min-height:1.3em;color:#ff8b8b}
+.bq-teclado{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 10px}
+.bq-k{aspect-ratio:1.5;border-radius:18px;border:1px solid var(--bd);background:rgba(21,88,201,.12);color:var(--txt);font-size:1.6rem;font-weight:500;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .1s,background .15s}
+.bq-k:active{transform:scale(.92);background:rgba(21,88,201,.35)}
+.bq-k .ic{width:26px;height:26px}
+#bq-cerrar{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px}
