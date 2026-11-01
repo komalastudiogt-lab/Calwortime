@@ -58,6 +58,8 @@
 <symbol id="i-tick" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></symbol>
 <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4l13 8-13 8z"/></symbol>
 <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+<symbol id="i-finger" viewBox="0 0 24 24"><path d="M12 10a2 2 0 0 0-2 2c0 1.02-.1 2.51-.26 4"/><path d="M14 13.12c0 2.38 0 6.38-1 8.88"/><path d="M17.29 21.02c.12-.6.43-2.3.5-3.02"/><path d="M2 12a10 10 0 0 1 18-6"/><path d="M2 16h.01"/><path d="M21.8 16c.2-2 .131-5.354 0-6"/><path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2"/><path d="M8.65 22c.21-.66.45-1.32.57-2"/><path d="M9 6.8a6 6 0 0 1 9 5.2v2"/></symbol>
+<symbol id="i-back" viewBox="0 0 24 24"><path d="M21 5H9l-7 7 7 7h12z"/><path d="M13 9l4 4M17 9l-4 4"/></symbol>
 </defs></svg>
 
 <header>
@@ -143,6 +145,9 @@
       </form>
       <label class="sw"><span>Vibración</span><input type="checkbox" id="p-vib"><i></i></label>
       <button type="button" class="link" id="btn-probar-vib">Probar vibración</button>
+      <label class="sw"><span>Bloqueo con PIN</span><input type="checkbox" id="p-pin"><i></i></label>
+      <label class="sw" id="fila-huella" hidden><span>Desbloquear con huella</span><input type="checkbox" id="p-bio"><i></i></label>
+      <button type="button" class="link" id="btn-cambiar-pin" hidden>Cambiar PIN</button>
     </div>
   </section>
 
@@ -199,6 +204,18 @@
     <h3 id="pk-t"></h3>
     <div id="pk-l"></div>
     <button type="button" class="btn ghost full" data-close>Cancelar</button>
+  </div>
+</div>
+
+<div id="bloqueo" class="bloqueo" hidden>
+  <button type="button" class="hb" id="bq-cerrar" aria-label="Cerrar" hidden><svg class="ic"><use href="#i-x"/></svg></button>
+  <div class="bq-in">
+    <img src="./icon.png" alt="" onerror="this.style.display='none'">
+    <p class="bq-t" id="bq-t">Ingresa tu PIN</p>
+    <div class="bq-pts" id="bq-pts"></div>
+    <small id="bq-msg"></small>
+    <div class="bq-teclado" id="bq-teclado"></div>
+    <button type="button" class="link" id="bq-olvide">Olvidé mi PIN</button>
   </div>
 </div>
 
