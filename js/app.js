@@ -640,15 +640,19 @@
     toast(horas >= 24 ? 'Pasaron más de 24 h: revisa la hora de salida' : 'Completa los datos y guarda');
   }
   $('btn-timer').addEventListener('click', toggleTimer);
-  $('btn-probar-vib').addEventListener('click', function () {
-    if (window.NativeHaptics) {
-      window.NativeHaptics('prueba').then(function (r) { toast('Plugin activo: ' + r, 4500); });
-    } else if (navigator.vibrate) {
-      toast('Sin plugin. Navegador: ' + (navigator.vibrate(300) ? 'enviado' : 'rechazado'), 4500);
-    } else {
-      toast('Este dispositivo no permite vibrar desde la app', 4500);
-    }
-  });
+  // Prueba de vibración: 4 métodos distintos, uno tras otro, para saber cuál acepta el teléfono
+  function secuenciaVib(i) {
+    var nombres = ['Plugin: vibración larga', 'Plugin: impacto fuerte', 'Plugin: notificación', 'Navegador'];
+    if (i >= 4) { toast('Fin. Dime cuáles sentiste: 1, 2, 3 o 4', 5000); return; }
+    toast((i + 1) + ' de 4 · ' + nombres[i], 2400);
+    if (i < 3) {
+      if (window.NativeHapticsTest) {
+        window.NativeHapticsTest(i + 1).then(function (x) { if (x !== 'ok') toast((i + 1) + ' de 4 · ' + x, 2400); });
+      } else { toast((i + 1) + ' de 4 · el plugin no está en esta versión', 2400); }
+    } else if (navigator.vibrate) { navigator.vibrate(500); }
+    setTimeout(function () { secuenciaVib(i + 1); }, 2700);
+  }
+  $('btn-probar-vib').addEventListener('click', function () { secuenciaVib(0); });
   $('p-vib').addEventListener('change', function () {
     vib = this.checked;
     save('calwortime_vibrar', vib);
