@@ -409,6 +409,7 @@
     $('p-nombre').value = P.nombre; $('p-moneda').value = P.moneda;
     $('p-tarifa').value = P.tarifa || ''; $('p-festivo').value = P.festivo;
     $('p-vib').checked = vib;
+    refrescarPin();
   }
 
   /* ---------- Respaldos y PDF ---------- */
@@ -640,19 +641,15 @@
     toast(horas >= 24 ? 'Pasaron más de 24 h: revisa la hora de salida' : 'Completa los datos y guarda');
   }
   $('btn-timer').addEventListener('click', toggleTimer);
-  // Prueba de vibración: 4 métodos distintos, uno tras otro, para saber cuál acepta el teléfono
-  function secuenciaVib(i) {
-    var nombres = ['Plugin: vibración larga', 'Plugin: impacto fuerte', 'Plugin: notificación', 'Navegador'];
-    if (i >= 4) { toast('Fin. Dime cuáles sentiste: 1, 2, 3 o 4', 5000); return; }
-    toast((i + 1) + ' de 4 · ' + nombres[i], 2400);
-    if (i < 3) {
-      if (window.NativeHapticsTest) {
-        window.NativeHapticsTest(i + 1).then(function (x) { if (x !== 'ok') toast((i + 1) + ' de 4 · ' + x, 2400); });
-      } else { toast((i + 1) + ' de 4 · el plugin no está en esta versión', 2400); }
-    } else if (navigator.vibrate) { navigator.vibrate(500); }
-    setTimeout(function () { secuenciaVib(i + 1); }, 2700);
-  }
-  $('btn-probar-vib').addEventListener('click', function () { secuenciaVib(0); });
+  $('btn-probar-vib').addEventListener('click', function () {
+    if (window.NativeHaptics) {
+      window.NativeHaptics('prueba').then(function (r) { toast('Plugin activo: ' + r, 4500); });
+    } else if (navigator.vibrate) {
+      toast('Sin plugin. Navegador: ' + (navigator.vibrate(300) ? 'enviado' : 'rechazado'), 4500);
+    } else {
+      toast('Este dispositivo no permite vibrar desde la app', 4500);
+    }
+  });
   $('p-vib').addEventListener('change', function () {
     vib = this.checked;
     save('calwortime_vibrar', vib);
@@ -664,6 +661,175 @@
   setInterval(function () { if (activo && $('v-inicio').classList.contains('active')) renderTimer(); }, 20000);
   document.addEventListener('visibilitychange', function () { if (activo) renderTimer(); });
 
+  /* ---------- Bloqueo con PIN y huella ---------- */
+  var KP = 'calwortime_pin', KB = 'calwortime_bq', KBIO = 'calwortime_bio';
+  var pinData = load(KP, null);
+  if (!pinData || !pinData.s || !pinData.h) pinData = null;
+  var bioOn = load(KBIO, false) === true;
+  var bq = { modo: null, buf: '', primero: '', cb: null };
+  var TITULOS = { abrir: 'Ingresa tu PIN', crear: 'Crea tu PIN de 4 dígitos', confirmar: 'Repite tu PIN', verificar: 'Confirma tu PIN actual' };
+  function sha(txt) {
+    if (window.crypto && window.crypto.subtle && window.TextEncoder) {
+      return window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(txt)).then(function (b) {
+        return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+      });
+    }
+    var h = 5381, i;
+    for (i = 0; i < txt.length; i++) h = ((h << 5) + h + txt.charCodeAt(i)) | 0;
+    return Promise.resolve('d' + (h >>> 0).toString(16));
+  }
+  function bioDisponible() { return window.NativeBiometria ? window.NativeBiometria.disponible() : Promise.resolve(false); }
+  function dibujarPuntos() {
+    var h = '', i;
+    for (i = 0; i < 4; i++) h += '<i class="' + (i < bq.buf.length ? 'on' : '') + '"></i>';
+    $('bq-pts').innerHTML = h;
+  }
+  function esperaRestante() {
+    var e = load(KB, { f: 0, hasta: 0 });
+    return Math.max(0, Math.ceil(((e.hasta || 0) - Date.now()) / 1000));
+  }
+  function msgBq(t) { $('bq-msg').textContent = t || ''; }
+  function abrirBloqueo(modo, cb) {
+    bq.modo = modo; bq.buf = ''; bq.primero = ''; bq.cb = cb || null;
+    $('bq-t').textContent = TITULOS[modo];
+    $('bq-cerrar').hidden = modo === 'abrir';
+    $('bq-olvide').hidden = modo !== 'abrir';
+    $('bq-bio').style.visibility = (modo === 'abrir' && bioOn && window.NativeBiometria) ? 'visible' : 'hidden';
+    msgBq(''); dibujarPuntos();
+    $('bloqueo').hidden = false;
+    if (modo === 'abrir') {
+      var w = esperaRestante();
+      if (w) msgBq('Espera ' + w + ' s para intentar de nuevo');
+      else if (bioOn && window.NativeBiometria) setTimeout(intentarBio, 500);
+    }
+  }
+  function cerrarBloqueo(ok) {
+    $('bloqueo').hidden = true;
+    var f = bq.cb; bq.cb = null; bq.modo = null;
+    if (f) f(ok);
+  }
+  function intentarBio() {
+    if (bq.modo !== 'abrir' || !window.NativeBiometria) return;
+    window.NativeBiometria.verificar().then(function (ok) {
+      if (ok && bq.modo === 'abrir') { vibrar('exito'); cerrarBloqueo(true); }
+    });
+  }
+  function errorPin(texto) {
+    var p = $('bq-pts');
+    p.classList.remove('err'); void p.offsetWidth; p.classList.add('err');
+    vibrar('aviso'); msgBq(texto); bq.buf = '';
+    setTimeout(dibujarPuntos, 350);
+  }
+  function tecla(k) {
+    if (!bq.modo) return;
+    if (k === 'bio') { intentarBio(); return; }
+    if (k === 'del') { bq.buf = bq.buf.slice(0, -1); dibujarPuntos(); return; }
+    if (bq.modo === 'abrir' && esperaRestante()) { msgBq('Espera ' + esperaRestante() + ' s para intentar de nuevo'); return; }
+    if (bq.buf.length >= 4) return;
+    bq.buf += k; dibujarPuntos();
+    if (bq.buf.length === 4) setTimeout(procesarPin, 120);
+  }
+  function procesarPin() {
+    var pin = bq.buf, modo = bq.modo;
+    if (modo === 'crear') {
+      bq.primero = pin; bq.buf = ''; bq.modo = 'confirmar';
+      $('bq-t').textContent = TITULOS.confirmar; msgBq(''); dibujarPuntos();
+      return;
+    }
+    if (modo === 'confirmar') {
+      if (pin !== bq.primero) {
+        bq.modo = 'crear'; bq.primero = ''; $('bq-t').textContent = TITULOS.crear;
+        errorPin('Los PIN no coinciden. Intenta de nuevo');
+        return;
+      }
+      var salt = Math.random().toString(36).slice(2);
+      sha(salt + pin).then(function (h) {
+        pinData = { s: salt, h: h }; save(KP, pinData);
+        vibrar('exito'); cerrarBloqueo(true); toast('PIN guardado');
+      });
+      return;
+    }
+    if (!pinData) { cerrarBloqueo(true); return; }
+    sha(pinData.s + pin).then(function (h) {
+      if (h === pinData.h) {
+        try { localStorage.removeItem(KB); } catch (e) {}
+        vibrar('exito'); cerrarBloqueo(true);
+        return;
+      }
+      if (modo === 'abrir') {
+        var e = load(KB, { f: 0, hasta: 0 });
+        e.f = (e.f || 0) + 1;
+        if (e.f >= 5) { e.f = 0; e.hasta = Date.now() + 30000; }
+        save(KB, e);
+        errorPin(e.hasta > Date.now() ? 'Demasiados intentos. Espera 30 s' : 'PIN incorrecto (' + (5 - e.f) + ' intentos restantes)');
+      } else { errorPin('PIN incorrecto'); }
+    });
+  }
+  (function () {
+    var h = '';
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'bio', '0', 'del'].forEach(function (k) {
+      var lbl = k === 'del' ? ic('back') : k === 'bio' ? ic('finger') : k;
+      h += '<button type="button" class="bq-k" data-k="' + k + '"' + (k === 'bio' ? ' id="bq-bio"' : '') + '>' + lbl + '</button>';
+    });
+    $('bq-teclado').innerHTML = h;
+  })();
+  function refrescarPin() {
+    $('p-pin').checked = !!pinData;
+    $('btn-cambiar-pin').hidden = !pinData;
+    bioDisponible().then(function (ok) {
+      $('fila-huella').hidden = !(pinData && ok);
+      $('p-bio').checked = bioOn;
+    });
+  }
+  $('bq-teclado').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-k]');
+    if (b) tecla(b.dataset.k);
+  });
+  $('bq-cerrar').addEventListener('click', function () { cerrarBloqueo(false); });
+  $('bq-olvide').addEventListener('click', function () {
+    ask('Esto borra todos tus turnos, tu perfil y el PIN. ¿Continuar?', function () {
+      ['calwortime_perfil', 'calwortime_turnos', 'calwortime_activo', 'calwortime_pin', 'calwortime_bio', 'calwortime_bq', 'calwortime_pista', 'calwortime_vibrar'].forEach(function (k) {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+      location.reload();
+    }, 'Borrar todo');
+  });
+  $('p-pin').addEventListener('change', function () {
+    if (this.checked) {
+      abrirBloqueo('crear', function () { refrescarPin(); });
+    } else {
+      abrirBloqueo('verificar', function (ok) {
+        if (ok) {
+          pinData = null; bioOn = false;
+          try { localStorage.removeItem(KP); localStorage.removeItem(KBIO); localStorage.removeItem(KB); } catch (e) {}
+          toast('Bloqueo desactivado');
+        }
+        refrescarPin();
+      });
+    }
+  });
+  $('btn-cambiar-pin').addEventListener('click', function () {
+    abrirBloqueo('verificar', function (ok) {
+      if (ok) abrirBloqueo('crear', function () { refrescarPin(); });
+    });
+  });
+  $('p-bio').addEventListener('change', function () {
+    var self = this;
+    if (!self.checked) { bioOn = false; save(KBIO, false); return; }
+    if (!window.NativeBiometria) { self.checked = false; return; }
+    window.NativeBiometria.verificar().then(function (ok) {
+      bioOn = ok; save(KBIO, ok); self.checked = ok;
+      toast(ok ? 'Huella activada' : 'No se pudo verificar la huella');
+    });
+  });
+  // Al volver a la app tras más de 30 s en segundo plano, vuelve a pedir el PIN
+  var ocultoDesde = 0;
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { ocultoDesde = Date.now(); return; }
+    if (pinData && ocultoDesde && Date.now() - ocultoDesde > 30000 && $('bloqueo').hidden) abrirBloqueo('abrir', null);
+    ocultoDesde = 0;
+  });
+
   /* ---------- Inicio de la app ---------- */
   buildWheel('w-h', 24);
   buildWheel('w-m', 60);
@@ -671,5 +837,6 @@
   retraso = 1500;
   go('inicio');
   retraso = 0;
+  if (pinData) abrirBloqueo('abrir', null);
   window.__calwortimeListo = true;
 })();
