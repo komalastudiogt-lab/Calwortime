@@ -94,6 +94,15 @@
       (s.paid ? ic('tick') + 'Pagado' : 'Por cobrar') + '</button></div></div></div>';
   }
   /* ---------- Detalles visuales ---------- */
+  // Vibración: usa el plugin nativo si existe; si no, la del navegador. Se puede apagar en Perfil.
+  var vib = load('calwortime_vibrar', true) !== false;
+  function vibrar(tipo) {
+    if (!vib) return;
+    try {
+      if (window.NativeHaptics) window.NativeHaptics(tipo);
+      else if (navigator.vibrate) navigator.vibrate(tipo === 'exito' ? [18, 40, 18] : 12);
+    } catch (e) {}
+  }
   var retraso = 0;
   var reducir = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function animar(el, hasta, fmt) {
@@ -399,6 +408,7 @@
   function fillProfile() {
     $('p-nombre').value = P.nombre; $('p-moneda').value = P.moneda;
     $('p-tarifa').value = P.tarifa || ''; $('p-festivo').value = P.festivo;
+    $('p-vib').checked = vib;
   }
 
   /* ---------- Respaldos y PDF ---------- */
@@ -463,7 +473,7 @@
       var id = b.dataset.id, a = b.dataset.a;
       if (a === 'pay') {
         var s = S.find(function (x) { return x.id === id; });
-        if (s) { s.paid = !s.paid; save(K.s, S); cambioId = id; refresh(); cambioId = null; }
+        if (s) { s.paid = !s.paid; save(K.s, S); cambioId = id; refresh(); cambioId = null; vibrar(s.paid ? 'exito' : 'suave'); }
       } else if (a === 'del') {
         ask('¿Eliminar esta jornada?', function () {
           S = S.filter(function (x) { return x.id !== id; });
@@ -536,6 +546,7 @@
     if (fromTimer) { fromTimer = false; limpiarActivo(); }
     resetForm();
     toast(P.tarifa > 0 ? 'Jornada guardada' : 'Guardada. Configura tu tarifa en Perfil');
+    vibrar('exito');
     ultimoId = s.id;
     go('inicio');
     ultimoId = null;
@@ -615,6 +626,7 @@
       save(KA, activo);
       renderTimer();
       toast('Turno iniciado a las ' + activo.start);
+      vibrar('suave');
       return;
     }
     var horas = (ahora.getTime() - activo.ts) / 36e5;
@@ -624,9 +636,15 @@
     $('form-titulo').textContent = 'Terminar turno';
     $('btn-cancelar').hidden = false;
     go('registro');
+    vibrar('suave');
     toast(horas >= 24 ? 'Pasaron más de 24 h: revisa la hora de salida' : 'Completa los datos y guarda');
   }
   $('btn-timer').addEventListener('click', toggleTimer);
+  $('p-vib').addEventListener('change', function () {
+    vib = this.checked;
+    save('calwortime_vibrar', vib);
+    if (vib) vibrar('suave');
+  });
   $('btn-descartar').addEventListener('click', function () {
     ask('¿Descartar el turno en curso?', function () { limpiarActivo(); toast('Turno descartado'); }, 'Descartar');
   });
