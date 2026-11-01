@@ -197,3 +197,17 @@ label{font-weight:500;letter-spacing:.01em}
 @keyframes sp-icono{0%{transform:scale(.55);opacity:0;filter:blur(8px)}26%{transform:scale(1.07);opacity:1;filter:blur(0)}36%,72%{transform:scale(1);opacity:1;filter:blur(0)}100%{transform:scale(1.55);opacity:0;filter:blur(10px)}}
 @keyframes sp-barra{to{transform:translateX(0)}}
 @keyframes sp-texto{0%,14%{opacity:0;transform:translateY(8px)}34%,72%{opacity:1;transform:none}100%{opacity:0}}
+
+/* Transición lateral entre pantallas, brillo del turno nuevo y animación de "Pagado" */
+main{overflow-x:hidden}
+.screen.active.dir-der{animation:entraDer .3s cubic-bezier(.2,.8,.2,1)}
+.screen.active.dir-izq{animation:entraIzq .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes entraDer{from{opacity:0;transform:translateX(40px)}}
+@keyframes entraIzq{from{opacity:0;transform:translateX(-40px)}}
+.item.nuevo{animation:destello 1.5s ease-out}
+@keyframes destello{0%{box-shadow:inset 0 0 0 2px var(--lime),inset 0 0 28px rgba(212,255,36,.4)}100%{box-shadow:inset 0 0 0 2px rgba(212,255,36,0),inset 0 0 0 rgba(212,255,36,0)}}
+.item.cambio{animation:franja .5s ease-out}
+.item.cambio .bd{animation:pop .45s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes franja{0%{border-left-width:12px}100%{border-left-width:3px}}
+.bd{display:inline-flex;align-items:center;gap:4px}
+.bd .ic{width:13px;height:13px;stroke-width:3}
