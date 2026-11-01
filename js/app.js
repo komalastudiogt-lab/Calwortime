@@ -20,6 +20,8 @@
   var S = load(K.s, []);
   if (!Array.isArray(S)) S = [];
   var editId = null, timeTarget = null, onYes = null, chart = null;
+  var ultimoId = null, cambioId = null;
+  var ORDEN = ['inicio', 'registro', 'informes', 'perfil'], pantalla = 'inicio';
 
   var pad = function (n) { return String(n).padStart(2, '0'); };
   var esc = function (t) {
@@ -85,11 +87,11 @@
     return '<div class="row"><div class="acts">' +
       '<button data-a="edit" data-id="' + s.id + '">' + ic('edit') + '</button>' +
       '<button data-a="del" data-id="' + s.id + '" class="d">' + ic('trash') + '</button></div>' +
-      '<div class="item' + (s.paid ? ' ok' : '') + '"><div><b>' + s.date + '</b><small>' + (r ? r + ' · ' : '') + s.start + ' - ' + s.end +
+      '<div class="item' + (s.paid ? ' ok' : '') + (s.id === ultimoId ? ' nuevo' : '') + (s.id === cambioId ? ' cambio' : '') + '"><div><b>' + s.date + '</b><small>' + (r ? r + ' · ' : '') + s.start + ' - ' + s.end +
       (s.notes ? ' · ' + esc(s.notes) : '') + '</small></div>' +
       '<div class="r"><span class="lime">' + money(c.pay) + '</span><small>' + c.h.toFixed(2) + ' h</small>' +
       '<button data-a="pay" data-id="' + s.id + '" class="bd ' + (s.paid ? 'ok' : '') + '">' +
-      (s.paid ? 'Pagado' : 'Por cobrar') + '</button></div></div></div>';
+      (s.paid ? ic('tick') + 'Pagado' : 'Por cobrar') + '</button></div></div></div>';
   }
   /* ---------- Detalles visuales ---------- */
   var retraso = 0;
@@ -248,7 +250,13 @@
 
   /* ---------- Navegación ---------- */
   function go(v) {
-    document.querySelectorAll('.screen').forEach(function (e) { e.classList.toggle('active', e.id === 'v-' + v); });
+    var dir = ORDEN.indexOf(v) - ORDEN.indexOf(pantalla);
+    pantalla = v;
+    document.querySelectorAll('.screen').forEach(function (e) {
+      e.classList.remove('dir-der', 'dir-izq');
+      e.classList.toggle('active', e.id === 'v-' + v);
+    });
+    if (dir !== 0) $('v-' + v).classList.add(dir > 0 ? 'dir-der' : 'dir-izq');
     document.querySelectorAll('.nav button').forEach(function (b) { b.classList.toggle('active', b.dataset.v === v); });
     $('main').scrollTop = 0;
     if (v === 'inicio') { renderHome(); renderTimer(); }
@@ -415,7 +423,7 @@
       var id = b.dataset.id, a = b.dataset.a;
       if (a === 'pay') {
         var s = S.find(function (x) { return x.id === id; });
-        if (s) { s.paid = !s.paid; save(K.s, S); refresh(); }
+        if (s) { s.paid = !s.paid; save(K.s, S); cambioId = id; refresh(); cambioId = null; }
       } else if (a === 'del') {
         ask('¿Eliminar esta jornada?', function () {
           S = S.filter(function (x) { return x.id !== id; });
@@ -488,7 +496,13 @@
     if (fromTimer) { fromTimer = false; limpiarActivo(); }
     resetForm();
     toast(P.tarifa > 0 ? 'Jornada guardada' : 'Guardada. Configura tu tarifa en Perfil');
+    ultimoId = s.id;
     go('inicio');
+    ultimoId = null;
+    setTimeout(function () {
+      var n = document.querySelector('.item.nuevo');
+      if (n && n.scrollIntoView) n.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    }, 300);
   });
 
   $('f-perfil').addEventListener('submit', function (e) {
