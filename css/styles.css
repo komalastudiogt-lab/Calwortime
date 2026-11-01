@@ -211,3 +211,22 @@ main{overflow-x:hidden}
 @keyframes franja{0%{border-left-width:12px}100%{border-left-width:3px}}
 .bd{display:inline-flex;align-items:center;gap:4px}
 .bd .ic{width:13px;height:13px;stroke-width:3}
+
+/* Barra inferior: pastilla deslizante */
+.nav{position:relative;--i:0}
+.pastilla{position:absolute;top:0;left:0;width:25%;height:100%;pointer-events:none;transform:translateX(calc(var(--i) * 100%));transition:transform .38s cubic-bezier(.3,1.25,.4,1)}
+.pastilla::before{content:"";position:absolute;left:50%;top:0;width:36px;height:3px;margin-left:-18px;border-radius:0 0 4px 4px;background:var(--lime);box-shadow:0 3px 16px rgba(212,255,36,.75)}
+.pastilla::after{content:"";position:absolute;inset:0;background:radial-gradient(60% 70% at 50% 0,rgba(212,255,36,.12),transparent 75%)}
+
+/* Profundidad: tarjetas con degradado y borde fino, resplandor detrás del recuadro de Inicio */
+.sheet{border:1px solid transparent;background:linear-gradient(#141b2b,#0f1522) padding-box,linear-gradient(160deg,rgba(21,88,201,.6),rgba(21,88,201,.08) 45%,rgba(212,255,36,.22)) border-box}
+.hero-wrap{background:radial-gradient(60% 75% at 50% 58%,rgba(21,88,201,.28),transparent 70%),var(--bg)}
+
+/* Estado vacío */
+.vacio{text-align:center;padding:22px 8px 12px}
+.vacio svg{animation:flota 3.4s ease-in-out infinite}
+.vacio .mano{transform-origin:60px 60px;animation:gira 8s linear infinite}
+.vacio p{margin-top:8px;font-weight:700;font-size:1.05rem}
+.vacio small{display:block;margin-top:4px}
+@keyframes flota{50%{transform:translateY(-7px)}}
+@keyframes gira{to{transform:rotate(360deg)}}
