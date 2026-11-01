@@ -45,6 +45,8 @@ jobs:
           path: debug.keystore
 
       - name: Preparar Capacitor y puente nativo
+        env:
+          USAR_HUELLA: 'si'   # cambia a 'no' para compilar sin el plugin de huella (la app usará solo PIN)
         run: |
           mkdir -p www/js
           cp index.html www/
@@ -63,7 +65,7 @@ jobs:
           cat << 'EOF' > native-bridge.js
           import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
           import { Share } from '@capacitor/share';
-          import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
+          import { Haptics } from '@capacitor/haptics';
 
           window.NativeShare = async function (base64Data, filename) {
             const r = await Filesystem.writeFile({ path: filename, data: base64Data, directory: Directory.Cache });
@@ -73,14 +75,6 @@ jobs:
           window.NativeSaveJSON = async function (jsonText, filename) {
             const r = await Filesystem.writeFile({ path: filename, data: jsonText, directory: Directory.Cache, encoding: Encoding.UTF8 });
             await Share.share({ title: 'Respaldo de Calwortime', url: r.uri, dialogTitle: 'Guardar o compartir respaldo' });
-          };
-          window.NativeHapticsTest = async function (n) {
-            try {
-              if (n === 1) await Haptics.vibrate({ duration: 600 });
-              else if (n === 2) await Haptics.impact({ style: ImpactStyle.Heavy });
-              else if (n === 3) await Haptics.notification({ type: NotificationType.Success });
-              return 'ok';
-            } catch (e) { return 'error: ' + (e && e.message ? e.message : e); }
           };
           const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
           window.NativeHaptics = async function (tipo) {
@@ -94,6 +88,27 @@ jobs:
           };
           EOF
 
+          if [ "$USAR_HUELLA" = "si" ]; then
+            if npm install @aparajita/capacitor-biometric-auth@9; then
+              cat << 'EOF2' >> native-bridge.js
+          import { BiometricAuth } from '@aparajita/capacitor-biometric-auth';
+          window.NativeBiometria = {
+            disponible: async function () {
+              try { const r = await BiometricAuth.checkBiometry(); return !!r.isAvailable; } catch (e) { return false; }
+            },
+            verificar: async function () {
+              try {
+                await BiometricAuth.authenticate({ reason: 'Desbloquear Calwortime', cancelTitle: 'Usar PIN', allowDeviceCredential: false, androidTitle: 'Calwortime', androidSubtitle: 'Confirma tu huella' });
+                return true;
+              } catch (e) { return false; }
+            }
+          };
+          EOF2
+            else
+              echo "::warning::No se pudo instalar el plugin de huella; la app usara solo PIN"
+            fi
+          fi
+
           npx esbuild native-bridge.js --bundle --outfile=www/js/native-bridge.js
 
           npx cap init "Calwortime" "com.calwortime.app" --web-dir www
@@ -101,6 +116,7 @@ jobs:
 
           # Permiso de vibración (se concede solo al instalar, no pide autorización)
           grep -q "android.permission.VIBRATE" android/app/src/main/AndroidManifest.xml || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.VIBRATE" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
+          grep -q "android.permission.USE_BIOMETRIC" android/app/src/main/AndroidManifest.xml || sed -i 's#</manifest>#    <uses-permission android:name="android.permission.USE_BIOMETRIC" />\n</manifest>#' android/app/src/main/AndroidManifest.xml
 
           if [ -f icon.png ]; then
             mkdir -p assets
