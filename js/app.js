@@ -134,9 +134,9 @@
     vals.forEach(function (v, j) { pts.push((j * 110 / 6).toFixed(1) + ',' + (37 - (v / mx) * 32).toFixed(1)); });
     var last = pts[6].split(',');
     $('spark').innerHTML =
-      '<polygon points="0,40 ' + pts.join(' ') + ' 110,40" fill="rgba(212,255,36,.14)"/>' +
-      '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#D4FF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3" fill="#D4FF24"/>';
+      '<polygon points="0,40 ' + pts.join(' ') + ' 110,40" fill="rgba(255,242,26,.14)"/>' +
+      '<polyline points="' + pts.join(' ') + '" fill="none" stroke="#FFF21A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="3" fill="#FFF21A"/>';
   }
   function lunes(iso) {
     var p = String(iso).split('-'), f = new Date(+p[0], +p[1] - 1, +p[2]);
@@ -171,12 +171,12 @@
   }
 
   var VACIO = '<div class="vacio"><svg viewBox="0 0 120 120" width="112" height="112" aria-hidden="true">' +
-    '<circle cx="60" cy="60" r="46" fill="rgba(21,88,201,.10)" stroke="#1558C9" stroke-width="2.5"/>' +
-    '<circle cx="60" cy="60" r="38" fill="none" stroke="rgba(21,88,201,.4)" stroke-width="1" stroke-dasharray="2 5"/>' +
-    '<path d="M60 20v7M60 93v7M20 60h7M93 60h7" stroke="#1558C9" stroke-width="3" stroke-linecap="round"/>' +
-    '<path d="M60 60L75 69" stroke="#e8edf7" stroke-width="4" stroke-linecap="round"/>' +
-    '<path class="mano" d="M60 60V34" stroke="#D4FF24" stroke-width="3.5" stroke-linecap="round"/>' +
-    '<circle cx="60" cy="60" r="4" fill="#D4FF24"/></svg>' +
+    '<circle cx="60" cy="60" r="46" fill="rgba(166,107,255,.10)" stroke="#A66BFF" stroke-width="2.5"/>' +
+    '<circle cx="60" cy="60" r="38" fill="none" stroke="rgba(166,107,255,.4)" stroke-width="1" stroke-dasharray="2 5"/>' +
+    '<path d="M60 20v7M60 93v7M20 60h7M93 60h7" stroke="#A66BFF" stroke-width="3" stroke-linecap="round"/>' +
+    '<path d="M60 60L75 69" stroke="#f2f2f5" stroke-width="4" stroke-linecap="round"/>' +
+    '<path class="mano" d="M60 60V34" stroke="#FFF21A" stroke-width="3.5" stroke-linecap="round"/>' +
+    '<circle cx="60" cy="60" r="4" fill="#FFF21A"/></svg>' +
     '<p>Aún no tienes turnos</p><small>Toca "Nuevo turno" o "Iniciar turno" para empezar</small></div>';
   // Pista de deslizar: la primera vez que hay turnos, la primera fila se mueve un poco y vuelve
   function pistaDeslizar() {
@@ -267,9 +267,9 @@
           data: k.map(function (d) { return +by[d].toFixed(2); }),
           backgroundColor: function (c) {
             var a = c.chart.chartArea;
-            if (!a) return '#1558C9';
+            if (!a) return '#A66BFF';
             var g = c.chart.ctx.createLinearGradient(0, a.bottom, 0, a.top);
-            g.addColorStop(0, '#1558C9'); g.addColorStop(1, '#D4FF24');
+            g.addColorStop(0, '#A66BFF'); g.addColorStop(1, '#FFF21A');
             return g;
           },
           borderWidth: 0, borderRadius: 8, borderSkipped: false, maxBarThickness: 38
@@ -282,15 +282,15 @@
         plugins: {
           legend: { display: false },
           tooltip: {
-            backgroundColor: '#121826', borderColor: '#D4FF24', borderWidth: 1, displayColors: false,
-            titleColor: '#7f8aa3', bodyColor: '#D4FF24', bodyFont: { weight: 'bold', size: 14 },
+            backgroundColor: '#212121', borderColor: '#FFF21A', borderWidth: 1, displayColors: false,
+            titleColor: '#9b9ba6', bodyColor: '#FFF21A', bodyFont: { weight: 'bold', size: 14 },
             padding: 10, cornerRadius: 10,
             callbacks: { label: function (c) { return money(c.parsed.y); } }
           }
         },
         scales: {
-          x: { ticks: { color: '#7f8aa3' }, grid: { display: false } },
-          y: { ticks: { color: '#7f8aa3' }, grid: { color: 'rgba(21,88,201,.15)' } }
+          x: { ticks: { color: '#9b9ba6' }, grid: { display: false } },
+          y: { ticks: { color: '#9b9ba6' }, grid: { color: 'rgba(166,107,255,.15)' } }
         }
       }
     });
@@ -453,7 +453,7 @@
     document.body.classList.add('pdf');
     var name = 'calwortime-reporte-' + today() + '.pdf';
     window.html2pdf()
-      .set({ margin: 8, filename: name, html2canvas: { scale: 2, backgroundColor: '#030407' },
+      .set({ margin: 8, filename: name, html2canvas: { scale: 2, backgroundColor: '#171717' },
         jsPDF: { unit: 'mm', format: 'a4' } })
       .from($('rep')).outputPdf('datauristring')
       .then(function (uri) {
